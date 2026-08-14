@@ -59,6 +59,7 @@ function Dashboard() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Job | null>(null);
   const [lastVisit, setLastVisit] = useState<string | null>(null);
+  const [tab, setTab] = useState("new");
 
   useEffect(() => {
     setLastVisit(getLastVisit());
@@ -108,6 +109,14 @@ function Dashboard() {
   );
 
   const byStatus = (s: JobStatus) => visible.filter((j) => j.status === s);
+
+  // If a search/filter yields nothing in the "New today" tab, fall back to the
+  // full 15-day list so results are actually visible while typing.
+  useEffect(() => {
+    if (tab === "new" && newJobs.length === 0 && (query.trim() || qualifying.length > 0)) {
+      setTab("all");
+    }
+  }, [tab, newJobs.length, qualifying.length, query]);
 
   const stats = useMemo(() => {
     const qualifyingAll = jobs.filter(isQualifying);
@@ -177,7 +186,7 @@ function Dashboard() {
           resultCount={visible.length}
         />
 
-        <Tabs defaultValue="new">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="flex-wrap">
             <TabsTrigger value="new">New today ({newJobs.length})</TabsTrigger>
             <TabsTrigger value="all">Last 15 days ({qualifying.length})</TabsTrigger>

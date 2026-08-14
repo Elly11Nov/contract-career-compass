@@ -64,15 +64,16 @@ export function FilterBar({
   onQueryChange,
   resultCount,
 }: FilterBarProps) {
-  const activeCount =
+  const filterCount =
     filters.roles.length +
     filters.countries.length +
     filters.contract_types.length +
     filters.work_models.length +
     (filters.min_match_score > 0 ? 1 : 0) +
     (filters.max_age_days !== 15 ? 1 : 0);
+  const activeCount = filterCount + (query.trim() ? 1 : 0);
 
-  const reset = () =>
+  const reset = () => {
     onChange({
       roles: [],
       countries: [],
@@ -81,6 +82,8 @@ export function FilterBar({
       max_age_days: 15,
       min_match_score: 0,
     });
+    onQueryChange("");
+  };
 
   return (
     <section className="bg-card border-border rounded-lg border p-4 shadow-sm">
