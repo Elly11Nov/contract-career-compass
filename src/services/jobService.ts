@@ -162,6 +162,16 @@ export async function getSearchHistory(): Promise<SearchRun[]> {
   }));
 }
 
+export async function createSearchRun(run: {
+  search_criteria: unknown;
+  jobs_found: number;
+  jobs_added: number;
+  jobs_removed: number;
+}): Promise<void> {
+  const { error } = await supabase.from("search_runs").insert(run as never);
+  if (error) throw error;
+}
+
 export function getLastVisit(): string | null {
   if (!isBrowser()) return null;
   return window.localStorage.getItem(VISIT_KEY);
@@ -182,4 +192,5 @@ export const jobService = {
   getSavedJobs,
   saveJob,
   getSearchHistory,
+  createSearchRun,
 };
