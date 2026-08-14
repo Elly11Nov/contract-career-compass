@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { DashboardStats } from "@/components/jobs/DashboardStats";
 import { FilterBar } from "@/components/jobs/FilterBar";
 import { JobDetail } from "@/components/jobs/JobDetail";
@@ -17,6 +19,7 @@ import {
   updateJobStatus,
 } from "@/services/jobService";
 import { filterJobs, isNewSince, isQualifying } from "@/lib/job-utils";
+import { runJobSearch } from "@/services/jobSearchService";
 import type { Job, JobFilters, JobStatus } from "@/types/job";
 
 export const Route = createFileRoute("/")({
@@ -76,6 +79,25 @@ function Dashboard() {
 
   const onStatusChange = (id: string, status: JobStatus) => statusMutation.mutate({ id, status });
 
+  const searchMutation = useMutation({
+    mutationFn: () => runJobSearch(),
+    onSuccess: (result) => {
+      if (!result.ok) {
+        toast.error(
+          result.provider_missing ? "Web search provider not configured" : "Search failed",
+          { description: result.error },
+        );
+        return;
+      }
+      toast.success(`Search complete — ${result.jobs_added} new job(s) added`, {
+        description: `${result.examined} advertisements examined · ${result.jobs_found} qualifying · ${result.duplicates} duplicate(s) skipped`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["search-history"] });
+    },
+    onError: (error: Error) => toast.error("Search failed", { description: error.message }),
+  });
+
   const visible = useMemo(() => filterJobs(jobs, filters, query), [jobs, filters, query]);
   const qualifying = useMemo(() => visible.filter(isQualifying), [visible]);
   const newJobs = useMemo(
@@ -111,7 +133,17 @@ function Dashboard() {
               Sweden, Denmark, Finland
             </p>
           </div>
-          <Badge variant="secondary">English working language · last 15 days</Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary">English working language · last 15 days</Badge>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => searchMutation.mutate()}
+              disabled={searchMutation.isPending}
+            >
+              {searchMutation.isPending ? "Searching…" : "Run search"}
+            </Button>
+          </div>
         </div>
       </header>
 
