@@ -328,7 +328,7 @@ async function extractAndScore(
   hit: ProviderHit,
   content: string,
   todayIso: string,
-): Promise<CandidateJob | null> {
+): Promise<{ candidate: CandidateJob | null; reason?: RejectionReason; detail?: string; title?: string }> {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) {
     throw new SearchProviderNotConfiguredError(
@@ -357,23 +357,32 @@ async function extractAndScore(
     if (res.status === 429 || res.status === 402) {
       throw new Error(`AI verification unavailable [${res.status}]: ${text}`);
     }
-    return null;
+    return { candidate: null, reason: "extraction_failed", detail: `AI error ${res.status}` };
   }
 
   const json = (await res.json()) as {
     choices?: { message?: { content?: string } }[];
   };
   const raw = json.choices?.[0]?.message?.content;
-  if (!raw) return null;
+  if (!raw) return { candidate: null, reason: "extraction_failed", detail: "empty AI response" };
 
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(raw.replace(/^```json\s*|\s*```$/g, "")) as Record<string, unknown>;
   } catch {
-    return null;
+    return { candidate: null, reason: "extraction_failed", detail: "unparseable AI response" };
   }
 
-  if (parsed["qualifies"] !== true) return null;
+  const parsedTitle = typeof parsed["title"] === "string" ? (parsed["title"] as string) : undefined;
+  if (parsed["qualifies"] !== true) {
+    const detail = String(parsed["rejection_reason"] ?? "");
+    return {
+      candidate: null,
+      reason: classifyRejectionReason(detail),
+      detail,
+      title: parsedTitle,
+    };
+  }
 
   // The URL must come from the actual search hit that was opened and analysed.
   // A model-supplied URL is only accepted when it is a plausible vacancy URL on
@@ -387,8 +396,10 @@ async function extractAndScore(
       /* keep hit.url */
     }
   }
-  if (!isPlausibleVacancyUrl(url)) return null;
-  return {
+  if (!isPlausibleVacancyUrl(url)) {
+    return { candidate: null, reason: "not_a_vacancy_url", title: parsedTitle };
+  }
+  const candidate: CandidateJob = {
     title: String(parsed["title"] ?? ""),
     company: String(parsed["company"] ?? ""),
     country: parsed["country"] as CandidateJob["country"],
@@ -412,6 +423,7 @@ async function extractAndScore(
     red_flags: (parsed["red_flags"] as string[]) ?? [],
     last_verified: new Date().toISOString(),
   };
+  return { candidate, title: parsedTitle };
 }
 
 /** Final safety net: re-check hard criteria in code, independent of the model. */
