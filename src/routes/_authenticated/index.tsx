@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -20,9 +20,10 @@ import {
 } from "@/services/jobService";
 import { filterJobs, isNewSince, isQualifying } from "@/lib/job-utils";
 import { runJobSearch } from "@/services/jobSearchService";
+import { supabase } from "@/integrations/supabase/client";
 import type { Job, JobFilters, JobStatus } from "@/types/job";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Contract Job Finder — Daily Contract Vacancy Dashboard" },
@@ -53,6 +54,7 @@ const defaultFilters: JobFilters = {
 
 function Dashboard() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<JobFilters>(defaultFilters);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Job | null>(null);
@@ -122,6 +124,13 @@ function Dashboard() {
 
   const sortByScore = (list: Job[]) => [...list].sort((a, b) => b.match_score - a.match_score);
 
+  const handleSignOut = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  };
+
   return (
     <div className="bg-background min-h-screen">
       <header className="bg-surface-header text-surface-header-foreground">
@@ -142,6 +151,9 @@ function Dashboard() {
               disabled={searchMutation.isPending}
             >
               {searchMutation.isPending ? "Searching…" : "Run search"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleSignOut}>
+              Sign out
             </Button>
           </div>
         </div>
