@@ -75,7 +75,7 @@ export function classifyRejectionReason(text: string): RejectionReason {
     return "local_language_required";
   if (/date|older than|publication|posted|stale|unknown age/.test(t))
     return "publication_date_out_of_range";
-  if (/country|location|outside|not in (germany|france|sweden|denmark|finland)/.test(t))
+  if (/country|location|outside|not in (germany|france|switzerland|sweden|denmark|finland)/.test(t))
     return "country_out_of_scope";
   if (/search[- ]results|aggregator|listing page|not a single advert/.test(t))
     return "not_a_vacancy_url";
