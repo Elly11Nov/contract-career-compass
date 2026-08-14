@@ -38,6 +38,31 @@ export interface SearchEngineResult {
   examined: number;
   rejected: number;
   queries: string[];
+  diagnostics?: CandidateDiagnostic[];
+}
+
+/** Diagnostics-only classification of a role family, derived from the ad title. */
+export type RoleFamily = "documentation" | "requirements_analysis" | "other";
+
+export type RejectionReason =
+  | "qualified"
+  | "not_a_vacancy_url"
+  | "page_not_openable"
+  | "extraction_failed"
+  | "permanent_role"
+  | "local_language_required"
+  | "publication_date_out_of_range"
+  | "country_out_of_scope"
+  | "role_not_relevant"
+  | "url_not_verified"
+  | "other";
+
+export interface CandidateDiagnostic {
+  url: string;
+  title: string;
+  role_family: RoleFamily;
+  reason: RejectionReason;
+  detail?: string;
 }
 
 export type SearchEngineResponse =

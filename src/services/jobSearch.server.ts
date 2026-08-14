@@ -19,6 +19,85 @@ import {
   TECHNICAL_WRITING_TITLES,
 } from "./searchCriteria";
 import type { CandidateJob, SearchEngineResult } from "./jobSearch.types";
+import type { CandidateDiagnostic, RejectionReason, RoleFamily } from "./jobSearch.types";
+
+/* ------------------------------------------------------------------ */
+/* Diagnostics helpers (classification only — no criteria are applied) */
+/* ------------------------------------------------------------------ */
+
+const DOC_WORDS = [
+  "technical writer",
+  "technical author",
+  "documentation",
+  "technical publications",
+  "information developer",
+  "information architect",
+  "knowledge specialist",
+  "knowledge manager",
+  "knowledge engineer",
+  "content engineer",
+  "content specialist",
+  "user assistance",
+  "redakteur",
+  "redaktör",
+];
+
+const BA_WORDS = [
+  "requirements",
+  "business analyst",
+  "business analysis",
+  "systems analyst",
+  "system analyst",
+  "functional analyst",
+  "business systems analyst",
+  "product analyst",
+  "kravanalytiker",
+  "kravhantering",
+  "analyste",
+];
+
+export function classifyRoleFamily(...texts: (string | undefined)[]): RoleFamily {
+  const t = texts.filter(Boolean).join(" ").toLowerCase();
+  const ba = BA_WORDS.some((w) => t.includes(w));
+  const doc = DOC_WORDS.some((w) => t.includes(w));
+  if (ba && !doc) return "requirements_analysis";
+  if (ba && doc) return "requirements_analysis";
+  if (doc) return "documentation";
+  return "other";
+}
+
+/** Map a free-text model rejection reason onto a diagnostic bucket. */
+export function classifyRejectionReason(text: string): RejectionReason {
+  const t = text.toLowerCase();
+  if (/permanent|unbefristet|festanstellung|full[- ]time employment|cdi\b|tillsvidare/.test(t))
+    return "permanent_role";
+  if (/language|german|french|swedish|danish|finnish|deutsch|english is not/.test(t))
+    return "local_language_required";
+  if (/date|older than|publication|posted|stale|unknown age/.test(t))
+    return "publication_date_out_of_range";
+  if (/country|location|outside|not in (germany|france|sweden|denmark|finland)/.test(t))
+    return "country_out_of_scope";
+  if (/search[- ]results|aggregator|listing page|not a single advert/.test(t))
+    return "not_a_vacancy_url";
+  if (/relevant|不|mismatch|different field|not related|profile|experience|scope of work/.test(t))
+    return "role_not_relevant";
+  return "other";
+}
+
+/** Which hard criterion did a model-approved candidate fail? */
+function hardCriteriaReason(job: CandidateJob): RejectionReason | null {
+  if (!job.title || !job.company || !job.url) return "extraction_failed";
+  if (!isPlausibleVacancyUrl(job.url)) return "not_a_vacancy_url";
+  if (!SEARCH_COUNTRIES.includes(job.country)) return "country_out_of_scope";
+  if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return "permanent_role";
+  const published = Date.parse(job.publication_date);
+  if (Number.isNaN(published)) return "publication_date_out_of_range";
+  const ageDays = (Date.now() - published) / 86_400_000;
+  if (ageDays < 0 || ageDays > MAX_AGE_DAYS) return "publication_date_out_of_range";
+  if (job.language?.local_language_required === true) return "local_language_required";
+  if (job.language && job.language.english_required === false) return "local_language_required";
+  return null;
+}
 
 const FIRECRAWL_DIRECT = "https://api.firecrawl.dev/v2";
 const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
@@ -249,7 +328,12 @@ async function extractAndScore(
   hit: ProviderHit,
   content: string,
   todayIso: string,
-): Promise<CandidateJob | null> {
+): Promise<{
+  candidate: CandidateJob | null;
+  reason?: RejectionReason | undefined;
+  detail?: string | undefined;
+  title?: string | undefined;
+}> {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) {
     throw new SearchProviderNotConfiguredError(
@@ -278,23 +362,32 @@ async function extractAndScore(
     if (res.status === 429 || res.status === 402) {
       throw new Error(`AI verification unavailable [${res.status}]: ${text}`);
     }
-    return null;
+    return { candidate: null, reason: "extraction_failed", detail: `AI error ${res.status}` };
   }
 
   const json = (await res.json()) as {
     choices?: { message?: { content?: string } }[];
   };
   const raw = json.choices?.[0]?.message?.content;
-  if (!raw) return null;
+  if (!raw) return { candidate: null, reason: "extraction_failed", detail: "empty AI response" };
 
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(raw.replace(/^```json\s*|\s*```$/g, "")) as Record<string, unknown>;
   } catch {
-    return null;
+    return { candidate: null, reason: "extraction_failed", detail: "unparseable AI response" };
   }
 
-  if (parsed["qualifies"] !== true) return null;
+  const parsedTitle = typeof parsed["title"] === "string" ? (parsed["title"] as string) : undefined;
+  if (parsed["qualifies"] !== true) {
+    const detail = String(parsed["rejection_reason"] ?? "");
+    return {
+      candidate: null,
+      reason: classifyRejectionReason(detail),
+      detail,
+      title: parsedTitle,
+    };
+  }
 
   // The URL must come from the actual search hit that was opened and analysed.
   // A model-supplied URL is only accepted when it is a plausible vacancy URL on
@@ -308,8 +401,10 @@ async function extractAndScore(
       /* keep hit.url */
     }
   }
-  if (!isPlausibleVacancyUrl(url)) return null;
-  return {
+  if (!isPlausibleVacancyUrl(url)) {
+    return { candidate: null, reason: "not_a_vacancy_url", title: parsedTitle };
+  }
+  const candidate: CandidateJob = {
     title: String(parsed["title"] ?? ""),
     company: String(parsed["company"] ?? ""),
     country: parsed["country"] as CandidateJob["country"],
@@ -333,6 +428,7 @@ async function extractAndScore(
     red_flags: (parsed["red_flags"] as string[]) ?? [],
     last_verified: new Date().toISOString(),
   };
+  return { candidate, title: parsedTitle };
 }
 
 /** Final safety net: re-check hard criteria in code, independent of the model. */
@@ -382,27 +478,53 @@ export async function runSearchEngine(options?: {
   const jobs: CandidateJob[] = [];
   const byKey = new Set<string>();
   let rejected = 0;
+  const diagnostics: CandidateDiagnostic[] = [];
+  const note = (
+    hit: ProviderHit,
+    reason: RejectionReason,
+    title?: string,
+    detail?: string,
+  ) => {
+    diagnostics.push({
+      url: hit.url,
+      title: title ?? hit.title ?? "",
+      role_family: classifyRoleFamily(title, hit.title, hit.description, hit.url),
+      reason,
+      ...(detail ? { detail } : {}),
+    });
+  };
 
   for (const hit of hits) {
     if (!isPlausibleVacancyUrl(hit.url)) {
       rejected += 1;
+      note(hit, "not_a_vacancy_url");
       continue;
     }
     // The advertisement must actually be openable before anything is considered.
     const content = await scrapeAdvertisement(hit.url);
     if (!content) {
       rejected += 1;
+      note(hit, "page_not_openable");
       continue;
     }
-    const candidate = await extractAndScore(hit, content, todayIso);
-    if (!candidate || !passesHardCriteria(candidate)) {
+    const outcome = await extractAndScore(hit, content, todayIso);
+    const candidate = outcome.candidate;
+    if (!candidate) {
       rejected += 1;
+      note(hit, outcome.reason ?? "other", outcome.title, outcome.detail);
+      continue;
+    }
+    const hardFail = hardCriteriaReason(candidate);
+    if (hardFail) {
+      rejected += 1;
+      note(hit, hardFail, candidate.title, "failed code-side hard criteria re-check");
       continue;
     }
     // Final gate: the stored URL must resolve to a live page.
     const verifiedUrl = await verifyVacancyUrl(candidate.url);
     if (!verifiedUrl) {
       rejected += 1;
+      note(hit, "url_not_verified", candidate.title);
       continue;
     }
     candidate.url = verifiedUrl;
@@ -410,7 +532,8 @@ export async function runSearchEngine(options?: {
     if (byKey.has(key)) continue;
     byKey.add(key);
     jobs.push(candidate);
+    note(hit, "qualified", candidate.title);
   }
 
-  return { jobs, examined: hits.length, rejected, queries };
+  return { jobs, examined: hits.length, rejected, queries, diagnostics };
 }
