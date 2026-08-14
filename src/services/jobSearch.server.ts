@@ -119,6 +119,63 @@ export async function scrapeAdvertisement(url: string): Promise<string | null> {
   }
 }
 
+const PLACEHOLDER_HOSTS = [
+  "example.com",
+  "example.org",
+  "example.net",
+  "localhost",
+  "test.com",
+  "mock.com",
+  "placeholder.com",
+];
+
+/** Aggregator/search-result paths that are not a single advertisement. */
+const SEARCH_PATH_PATTERNS = [
+  /\/search\b/i,
+  /\/jobs\/?$/i,
+  /\/browse\b/i,
+  /\/results\b/i,
+  /\/emplois\/?$/i,
+  /\/stellenangebote\/?$/i,
+];
+
+/** Structural check: is this a plausible, non-placeholder, single-advertisement URL? */
+export function isPlausibleVacancyUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  if (!host.includes(".")) return false;
+  if (PLACEHOLDER_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) return false;
+  if (parsed.pathname === "/" || parsed.pathname === "") return false;
+  if (parsed.searchParams.has("q") || parsed.searchParams.has("query")) return false;
+  if (SEARCH_PATH_PATTERNS.some((re) => re.test(parsed.pathname))) return false;
+  return true;
+}
+
+/**
+ * Confirm the advertisement URL actually resolves to a live page.
+ * Returns the final (redirect-resolved) URL, or null when it cannot be opened.
+ */
+export async function verifyVacancyUrl(rawUrl: string): Promise<string | null> {
+  if (!isPlausibleVacancyUrl(rawUrl)) return null;
+  try {
+    let res = await fetch(rawUrl, { method: "HEAD", redirect: "follow" });
+    if (res.status === 405 || res.status === 501 || res.status === 403) {
+      res = await fetch(rawUrl, { method: "GET", redirect: "follow" });
+    }
+    if (!res.ok) return null;
+    const finalUrl = res.url || rawUrl;
+    return isPlausibleVacancyUrl(finalUrl) ? finalUrl : null;
+  } catch {
+    return null;
+  }
+}
+
 const EXTRACTION_SCHEMA = `{
   "qualifies": boolean,
   "rejection_reason": string,
@@ -256,6 +313,7 @@ async function extractAndScore(
 /** Final safety net: re-check hard criteria in code, independent of the model. */
 export function passesHardCriteria(job: CandidateJob): boolean {
   if (!job.title || !job.company || !job.url) return false;
+  if (!isPlausibleVacancyUrl(job.url)) return false;
   if (!SEARCH_COUNTRIES.includes(job.country)) return false;
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return false;
   const published = Date.parse(job.publication_date);
