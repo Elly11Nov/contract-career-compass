@@ -283,7 +283,19 @@ async function extractAndScore(
 
   if (parsed["qualifies"] !== true) return null;
 
-  const url = (parsed["url"] as string) || hit.url;
+  // The URL must come from the actual search hit that was opened and analysed.
+  // A model-supplied URL is only accepted when it is a plausible vacancy URL on
+  // the same host (e.g. a cleaner employer application link on the same site).
+  let url = hit.url;
+  const modelUrl = typeof parsed["url"] === "string" ? (parsed["url"] as string) : "";
+  if (modelUrl && modelUrl !== hit.url && isPlausibleVacancyUrl(modelUrl)) {
+    try {
+      if (new URL(modelUrl).hostname === new URL(hit.url).hostname) url = modelUrl;
+    } catch {
+      /* keep hit.url */
+    }
+  }
+  if (!isPlausibleVacancyUrl(url)) return null;
   return {
     title: String(parsed["title"] ?? ""),
     company: String(parsed["company"] ?? ""),
