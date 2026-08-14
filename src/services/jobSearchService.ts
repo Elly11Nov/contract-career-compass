@@ -12,10 +12,16 @@ import type {
   JobSearchRunSummary,
   SearchEngineResult,
 } from "./jobSearch.types";
+import type { CandidateDiagnostic } from "./jobSearch.types";
 import type { Job } from "@/types/job";
 
 export type RunJobSearchResult =
-  | ({ ok: true; queries: string[]; examined: number } & JobSearchRunSummary)
+  | ({
+      ok: true;
+      queries: string[];
+      examined: number;
+      diagnostics?: CandidateDiagnostic[];
+    } & JobSearchRunSummary)
   | { ok: false; error: string; provider_missing: boolean };
 
 /** Search the web for candidate vacancies (verification + scoring happen server-side). */
@@ -124,7 +130,7 @@ export async function runJobSearch(options?: {
     };
   }
 
-  const { jobs, examined, queries } = response.result;
+  const { jobs, examined, queries, diagnostics } = response.result;
   const qualifying = jobs.filter(verifyJob).map(scoreJob);
   const { added, duplicates } = await saveJobs(qualifying);
 
@@ -143,6 +149,7 @@ export async function runJobSearch(options?: {
     jobs_added: added.length,
     jobs_removed: examined - qualifying.length,
     duplicates,
+    ...(diagnostics ? { diagnostics } : {}),
   };
 }
 
