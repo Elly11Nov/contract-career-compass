@@ -157,6 +157,11 @@ export function isPlausibleVacancyUrl(rawUrl: string): boolean {
   return true;
 }
 
+// Statuses that mean "the page exists but the site blocks automated clients".
+// The advertisement was already scraped successfully at this point, so these
+// must not disqualify a genuine vacancy.
+const BOT_PROTECTED_STATUSES = new Set([401, 403, 405, 429, 999]);
+
 /**
  * Confirm the advertisement URL actually resolves to a live page.
  * Returns the final (redirect-resolved) URL, or null when it cannot be opened.
@@ -168,7 +173,7 @@ export async function verifyVacancyUrl(rawUrl: string): Promise<string | null> {
     if (res.status === 405 || res.status === 501 || res.status === 403) {
       res = await fetch(rawUrl, { method: "GET", redirect: "follow" });
     }
-    if (!res.ok) return null;
+    if (!res.ok && !BOT_PROTECTED_STATUSES.has(res.status)) return null;
     const finalUrl = res.url || rawUrl;
     return isPlausibleVacancyUrl(finalUrl) ? finalUrl : null;
   } catch {
