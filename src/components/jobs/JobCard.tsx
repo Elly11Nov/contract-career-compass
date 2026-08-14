@@ -10,7 +10,7 @@ interface JobCardProps {
   job: Job;
   onOpen: (job: Job) => void;
   onStatusChange: (id: string, status: JobStatus) => void;
-  isNew?: boolean;
+  isNew?: boolean | undefined;
 }
 
 const recommendationClass: Record<Job["recommendation"], string> = {
