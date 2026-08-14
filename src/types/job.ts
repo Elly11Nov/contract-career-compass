@@ -1,4 +1,10 @@
-export type Country = "Germany" | "France" | "Sweden" | "Denmark" | "Finland";
+export type Country =
+  | "Germany"
+  | "France"
+  | "Switzerland"
+  | "Sweden"
+  | "Denmark"
+  | "Finland";
 
 export type RoleCategory = "Technical Writer" | "Business Analyst" | "Related";
 
@@ -114,6 +120,7 @@ export const CONTRACT_TYPES: ContractType[] = [
 export const COUNTRIES: Country[] = [
   "Germany",
   "France",
+  "Switzerland",
   "Sweden",
   "Denmark",
   "Finland",

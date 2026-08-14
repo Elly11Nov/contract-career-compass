@@ -58,6 +58,7 @@ export const BUSINESS_ANALYSIS_TITLES = [
 export const SEARCH_COUNTRIES: Country[] = [
   "Germany",
   "France",
+  "Switzerland",
   "Sweden",
   "Denmark",
   "Finland",
