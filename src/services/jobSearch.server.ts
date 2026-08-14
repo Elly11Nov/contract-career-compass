@@ -19,6 +19,85 @@ import {
   TECHNICAL_WRITING_TITLES,
 } from "./searchCriteria";
 import type { CandidateJob, SearchEngineResult } from "./jobSearch.types";
+import type { CandidateDiagnostic, RejectionReason, RoleFamily } from "./jobSearch.types";
+
+/* ------------------------------------------------------------------ */
+/* Diagnostics helpers (classification only — no criteria are applied) */
+/* ------------------------------------------------------------------ */
+
+const DOC_WORDS = [
+  "technical writer",
+  "technical author",
+  "documentation",
+  "technical publications",
+  "information developer",
+  "information architect",
+  "knowledge specialist",
+  "knowledge manager",
+  "knowledge engineer",
+  "content engineer",
+  "content specialist",
+  "user assistance",
+  "redakteur",
+  "redaktör",
+];
+
+const BA_WORDS = [
+  "requirements",
+  "business analyst",
+  "business analysis",
+  "systems analyst",
+  "system analyst",
+  "functional analyst",
+  "business systems analyst",
+  "product analyst",
+  "kravanalytiker",
+  "kravhantering",
+  "analyste",
+];
+
+export function classifyRoleFamily(...texts: (string | undefined)[]): RoleFamily {
+  const t = texts.filter(Boolean).join(" ").toLowerCase();
+  const ba = BA_WORDS.some((w) => t.includes(w));
+  const doc = DOC_WORDS.some((w) => t.includes(w));
+  if (ba && !doc) return "requirements_analysis";
+  if (ba && doc) return "requirements_analysis";
+  if (doc) return "documentation";
+  return "other";
+}
+
+/** Map a free-text model rejection reason onto a diagnostic bucket. */
+export function classifyRejectionReason(text: string): RejectionReason {
+  const t = text.toLowerCase();
+  if (/permanent|unbefristet|festanstellung|full[- ]time employment|cdi\b|tillsvidare/.test(t))
+    return "permanent_role";
+  if (/language|german|french|swedish|danish|finnish|deutsch|english is not/.test(t))
+    return "local_language_required";
+  if (/date|older than|publication|posted|stale|unknown age/.test(t))
+    return "publication_date_out_of_range";
+  if (/country|location|outside|not in (germany|france|sweden|denmark|finland)/.test(t))
+    return "country_out_of_scope";
+  if (/search[- ]results|aggregator|listing page|not a single advert/.test(t))
+    return "not_a_vacancy_url";
+  if (/relevant|不|mismatch|different field|not related|profile|experience|scope of work/.test(t))
+    return "role_not_relevant";
+  return "other";
+}
+
+/** Which hard criterion did a model-approved candidate fail? */
+function hardCriteriaReason(job: CandidateJob): RejectionReason | null {
+  if (!job.title || !job.company || !job.url) return "extraction_failed";
+  if (!isPlausibleVacancyUrl(job.url)) return "not_a_vacancy_url";
+  if (!SEARCH_COUNTRIES.includes(job.country)) return "country_out_of_scope";
+  if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return "permanent_role";
+  const published = Date.parse(job.publication_date);
+  if (Number.isNaN(published)) return "publication_date_out_of_range";
+  const ageDays = (Date.now() - published) / 86_400_000;
+  if (ageDays < 0 || ageDays > MAX_AGE_DAYS) return "publication_date_out_of_range";
+  if (job.language?.local_language_required === true) return "local_language_required";
+  if (job.language && job.language.english_required === false) return "local_language_required";
+  return null;
+}
 
 const FIRECRAWL_DIRECT = "https://api.firecrawl.dev/v2";
 const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
