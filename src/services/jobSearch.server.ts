@@ -371,7 +371,12 @@ export async function runSearchEngine(options?: {
   let rejected = 0;
 
   for (const hit of hits) {
-    const content = hit.markdown ?? (await scrapeAdvertisement(hit.url));
+    if (!isPlausibleVacancyUrl(hit.url)) {
+      rejected += 1;
+      continue;
+    }
+    // The advertisement must actually be openable before anything is considered.
+    const content = await scrapeAdvertisement(hit.url);
     if (!content) {
       rejected += 1;
       continue;
@@ -381,6 +386,13 @@ export async function runSearchEngine(options?: {
       rejected += 1;
       continue;
     }
+    // Final gate: the stored URL must resolve to a live page.
+    const verifiedUrl = await verifyVacancyUrl(candidate.url);
+    if (!verifiedUrl) {
+      rejected += 1;
+      continue;
+    }
+    candidate.url = verifiedUrl;
     const key = dedupeKey(candidate);
     if (byKey.has(key)) continue;
     byKey.add(key);
