@@ -72,12 +72,16 @@ export function buildQueries(): string[] {
   }
   // Rotate countries per title so a truncated slice also spans all countries.
   const queries: string[] = [];
-  titles.forEach((title, index) => {
-    for (let c = 0; c < SEARCH_COUNTRIES.length; c += 1) {
-      const country = SEARCH_COUNTRIES[(index + c) % SEARCH_COUNTRIES.length]!;
+  for (let pass = 0; pass < SEARCH_COUNTRIES.length; pass += 1) {
+    titles.forEach((title, index) => {
+      const country = SEARCH_COUNTRIES[(index + pass) % SEARCH_COUNTRIES.length]!;
       queries.push(`"${title}" ${contractWords} job ${country} English`);
-    }
-  });
+    });
+  }
+  return queries;
+}
+
+function _unused() {
   return queries;
 }
 
