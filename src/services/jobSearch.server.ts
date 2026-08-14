@@ -62,18 +62,26 @@ function firecrawlRequest(path: string, body: unknown) {
 /** Build the provider queries from the configured criteria. */
 export function buildQueries(): string[] {
   const contractWords = "contract OR freelance OR interim OR \"fixed-term\" OR consultant";
-  const titles = [
-    ...TECHNICAL_WRITING_TITLES.slice(0, 5),
-    ...BUSINESS_ANALYSIS_TITLES.slice(0, 5),
-  ];
+  // Interleave the two role families so any truncated slice of the query list
+  // still covers documentation AND requirements/analysis vocabulary.
+  const titles: string[] = [];
+  const maxLen = Math.max(TECHNICAL_WRITING_TITLES.length, BUSINESS_ANALYSIS_TITLES.length);
+  for (let i = 0; i < maxLen; i += 1) {
+    if (TECHNICAL_WRITING_TITLES[i]) titles.push(TECHNICAL_WRITING_TITLES[i]!);
+    if (BUSINESS_ANALYSIS_TITLES[i]) titles.push(BUSINESS_ANALYSIS_TITLES[i]!);
+  }
+  // Rotate countries per title so a truncated slice also spans all countries.
   const queries: string[] = [];
-  for (const country of SEARCH_COUNTRIES) {
-    for (const title of titles) {
+  for (let pass = 0; pass < SEARCH_COUNTRIES.length; pass += 1) {
+    titles.forEach((title, index) => {
+      const country = SEARCH_COUNTRIES[(index + pass) % SEARCH_COUNTRIES.length]!;
       queries.push(`"${title}" ${contractWords} job ${country} English`);
-    }
+    });
   }
   return queries;
 }
+
+
 
 type ProviderHit = { url: string; title?: string; description?: string; markdown?: string };
 
