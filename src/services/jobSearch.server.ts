@@ -328,7 +328,12 @@ async function extractAndScore(
   hit: ProviderHit,
   content: string,
   todayIso: string,
-): Promise<{ candidate: CandidateJob | null; reason?: RejectionReason; detail?: string; title?: string }> {
+): Promise<{
+  candidate: CandidateJob | null;
+  reason?: RejectionReason | undefined;
+  detail?: string | undefined;
+  title?: string | undefined;
+}> {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) {
     throw new SearchProviderNotConfiguredError(
@@ -473,27 +478,53 @@ export async function runSearchEngine(options?: {
   const jobs: CandidateJob[] = [];
   const byKey = new Set<string>();
   let rejected = 0;
+  const diagnostics: CandidateDiagnostic[] = [];
+  const note = (
+    hit: ProviderHit,
+    reason: RejectionReason,
+    title?: string,
+    detail?: string,
+  ) => {
+    diagnostics.push({
+      url: hit.url,
+      title: title ?? hit.title ?? "",
+      role_family: classifyRoleFamily(title, hit.title, hit.description, hit.url),
+      reason,
+      ...(detail ? { detail } : {}),
+    });
+  };
 
   for (const hit of hits) {
     if (!isPlausibleVacancyUrl(hit.url)) {
       rejected += 1;
+      note(hit, "not_a_vacancy_url");
       continue;
     }
     // The advertisement must actually be openable before anything is considered.
     const content = await scrapeAdvertisement(hit.url);
     if (!content) {
       rejected += 1;
+      note(hit, "page_not_openable");
       continue;
     }
-    const candidate = await extractAndScore(hit, content, todayIso);
-    if (!candidate || !passesHardCriteria(candidate)) {
+    const outcome = await extractAndScore(hit, content, todayIso);
+    const candidate = outcome.candidate;
+    if (!candidate) {
       rejected += 1;
+      note(hit, outcome.reason ?? "other", outcome.title, outcome.detail);
+      continue;
+    }
+    const hardFail = hardCriteriaReason(candidate);
+    if (hardFail) {
+      rejected += 1;
+      note(hit, hardFail, candidate.title, "failed code-side hard criteria re-check");
       continue;
     }
     // Final gate: the stored URL must resolve to a live page.
     const verifiedUrl = await verifyVacancyUrl(candidate.url);
     if (!verifiedUrl) {
       rejected += 1;
+      note(hit, "url_not_verified", candidate.title);
       continue;
     }
     candidate.url = verifiedUrl;
@@ -501,7 +532,8 @@ export async function runSearchEngine(options?: {
     if (byKey.has(key)) continue;
     byKey.add(key);
     jobs.push(candidate);
+    note(hit, "qualified", candidate.title);
   }
 
-  return { jobs, examined: hits.length, rejected, queries };
+  return { jobs, examined: hits.length, rejected, queries, diagnostics };
 }
