@@ -42,8 +42,23 @@ export function filterJobs(jobs: Job[], filters: JobFilters, query: string): Job
       return false;
     if (filters.work_models.length && !filters.work_models.includes(job.work_model)) return false;
     if (q) {
-      const haystack =
-        `${job.title} ${job.company} ${job.city} ${job.country} ${job.role_title_group}`.toLowerCase();
+      const haystack = [
+        job.title,
+        job.company,
+        job.city,
+        job.country,
+        job.role_title_group,
+        job.role_category,
+        job.contract_type,
+        job.work_model,
+        job.duration ?? "",
+        job.source,
+        job.recommendation,
+        job.status,
+        job.match_summary ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;
