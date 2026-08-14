@@ -22,7 +22,7 @@ import { filterJobs, isNewSince, isQualifying } from "@/lib/job-utils";
 import { runJobSearch } from "@/services/jobSearchService";
 import type { Job, JobFilters, JobStatus } from "@/types/job";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Contract Job Finder — Daily Contract Vacancy Dashboard" },
