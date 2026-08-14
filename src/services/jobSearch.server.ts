@@ -119,6 +119,68 @@ export async function scrapeAdvertisement(url: string): Promise<string | null> {
   }
 }
 
+const PLACEHOLDER_HOSTS = [
+  "example.com",
+  "example.org",
+  "example.net",
+  "localhost",
+  "test.com",
+  "mock.com",
+  "placeholder.com",
+];
+
+/** Aggregator/search-result paths that are not a single advertisement. */
+const SEARCH_PATH_PATTERNS = [
+  /\/search\b/i,
+  /\/jobs\/?$/i,
+  /\/browse\b/i,
+  /\/results\b/i,
+  /\/emplois\/?$/i,
+  /\/stellenangebote\/?$/i,
+];
+
+/** Structural check: is this a plausible, non-placeholder, single-advertisement URL? */
+export function isPlausibleVacancyUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  if (!host.includes(".")) return false;
+  if (PLACEHOLDER_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) return false;
+  if (parsed.pathname === "/" || parsed.pathname === "") return false;
+  if (parsed.searchParams.has("q") || parsed.searchParams.has("query")) return false;
+  if (SEARCH_PATH_PATTERNS.some((re) => re.test(parsed.pathname))) return false;
+  return true;
+}
+
+// Statuses that mean "the page exists but the site blocks automated clients".
+// The advertisement was already scraped successfully at this point, so these
+// must not disqualify a genuine vacancy.
+const BOT_PROTECTED_STATUSES = new Set([401, 403, 405, 429, 999]);
+
+/**
+ * Confirm the advertisement URL actually resolves to a live page.
+ * Returns the final (redirect-resolved) URL, or null when it cannot be opened.
+ */
+export async function verifyVacancyUrl(rawUrl: string): Promise<string | null> {
+  if (!isPlausibleVacancyUrl(rawUrl)) return null;
+  try {
+    let res = await fetch(rawUrl, { method: "HEAD", redirect: "follow" });
+    if (res.status === 405 || res.status === 501 || res.status === 403) {
+      res = await fetch(rawUrl, { method: "GET", redirect: "follow" });
+    }
+    if (!res.ok && !BOT_PROTECTED_STATUSES.has(res.status)) return null;
+    const finalUrl = res.url || rawUrl;
+    return isPlausibleVacancyUrl(finalUrl) ? finalUrl : null;
+  } catch {
+    return null;
+  }
+}
+
 const EXTRACTION_SCHEMA = `{
   "qualifies": boolean,
   "rejection_reason": string,
@@ -226,7 +288,19 @@ async function extractAndScore(
 
   if (parsed["qualifies"] !== true) return null;
 
-  const url = (parsed["url"] as string) || hit.url;
+  // The URL must come from the actual search hit that was opened and analysed.
+  // A model-supplied URL is only accepted when it is a plausible vacancy URL on
+  // the same host (e.g. a cleaner employer application link on the same site).
+  let url = hit.url;
+  const modelUrl = typeof parsed["url"] === "string" ? (parsed["url"] as string) : "";
+  if (modelUrl && modelUrl !== hit.url && isPlausibleVacancyUrl(modelUrl)) {
+    try {
+      if (new URL(modelUrl).hostname === new URL(hit.url).hostname) url = modelUrl;
+    } catch {
+      /* keep hit.url */
+    }
+  }
+  if (!isPlausibleVacancyUrl(url)) return null;
   return {
     title: String(parsed["title"] ?? ""),
     company: String(parsed["company"] ?? ""),
@@ -256,6 +330,7 @@ async function extractAndScore(
 /** Final safety net: re-check hard criteria in code, independent of the model. */
 export function passesHardCriteria(job: CandidateJob): boolean {
   if (!job.title || !job.company || !job.url) return false;
+  if (!isPlausibleVacancyUrl(job.url)) return false;
   if (!SEARCH_COUNTRIES.includes(job.country)) return false;
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return false;
   const published = Date.parse(job.publication_date);
@@ -301,7 +376,12 @@ export async function runSearchEngine(options?: {
   let rejected = 0;
 
   for (const hit of hits) {
-    const content = hit.markdown ?? (await scrapeAdvertisement(hit.url));
+    if (!isPlausibleVacancyUrl(hit.url)) {
+      rejected += 1;
+      continue;
+    }
+    // The advertisement must actually be openable before anything is considered.
+    const content = await scrapeAdvertisement(hit.url);
     if (!content) {
       rejected += 1;
       continue;
@@ -311,6 +391,13 @@ export async function runSearchEngine(options?: {
       rejected += 1;
       continue;
     }
+    // Final gate: the stored URL must resolve to a live page.
+    const verifiedUrl = await verifyVacancyUrl(candidate.url);
+    if (!verifiedUrl) {
+      rejected += 1;
+      continue;
+    }
+    candidate.url = verifiedUrl;
     const key = dedupeKey(candidate);
     if (byKey.has(key)) continue;
     byKey.add(key);
