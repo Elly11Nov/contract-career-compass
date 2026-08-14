@@ -28,9 +28,26 @@ export async function searchJobs(options?: {
   return response.result;
 }
 
+const PLACEHOLDER_HOSTS = ["example.com", "example.org", "example.net", "localhost"];
+
+/** Structural guard so no placeholder/mock URL can ever be persisted. */
+function hasRealVacancyUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (!host.includes(".")) return false;
+    if (PLACEHOLDER_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) return false;
+    return parsed.pathname.length > 1;
+  } catch {
+    return false;
+  }
+}
+
 /** Client-side re-check of the hard criteria before anything is stored. */
 export function verifyJob(job: CandidateJob): boolean {
   if (!job.title || !job.company || !job.url) return false;
+  if (!hasRealVacancyUrl(job.url)) return false;
   if (!SEARCH_CRITERIA.countries.includes(job.country)) return false;
   if (!SEARCH_CRITERIA.contract_types.includes(job.contract_type)) return false;
   const published = Date.parse(job.publication_date);
