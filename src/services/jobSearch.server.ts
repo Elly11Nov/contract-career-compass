@@ -88,8 +88,19 @@ async function providerSearch(query: string, limit: number): Promise<ProviderHit
     const text = await res.text();
     throw new Error(`Web search failed [${res.status}]: ${text}`);
   }
-  const json = (await res.json()) as { data?: ProviderHit[]; web?: ProviderHit[] };
-  return json.data ?? json.web ?? [];
+  // Firecrawl v2 returns { success, data: { web: [...], news?: [...] } }.
+  // Older/direct shapes return a flat array in `data` or a top-level `web` array.
+  const json = (await res.json()) as {
+    data?: ProviderHit[] | { web?: ProviderHit[]; news?: ProviderHit[]; images?: ProviderHit[] };
+    web?: ProviderHit[];
+    results?: ProviderHit[];
+  };
+  const data = json.data;
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    return [...(data.web ?? []), ...(data.news ?? [])];
+  }
+  return json.web ?? json.results ?? [];
 }
 
 /** Open the actual advertisement so fields can be verified against the source. */
