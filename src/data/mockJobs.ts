@@ -448,12 +448,20 @@ export const mockJobs: Job[] = seeds.map((seed) => {
   };
 });
 
-export const mockSearchHistory: SearchRun[] = [0, 1, 2, 4, 7].map((n, i) => ({
+const runStats = [
+  { age: 0, found: 12, added: 2, removed: 1 },
+  { age: 1, found: 11, added: 1, removed: 1 },
+  { age: 2, found: 11, added: 3, removed: 1 },
+  { age: 4, found: 9, added: 1, removed: 0 },
+  { age: 7, found: 8, added: 8, removed: 0 },
+];
+
+export const mockSearchHistory: SearchRun[] = runStats.map((r, i) => ({
   id: `run-${i}`,
-  run_date: daysAgo(n),
-  jobs_found: [12, 11, 11, 9, 8][i],
-  jobs_added: [2, 1, 3, 1, 8][i],
-  jobs_removed: [1, 1, 1, 0, 0][i],
+  run_date: daysAgo(r.age),
+  jobs_found: r.found,
+  jobs_added: r.added,
+  jobs_removed: r.removed,
   criteria: {
     roles: ["Technical Writer", "Business Analyst", "Requirements Engineer"],
     countries: ["Germany", "France", "Sweden", "Denmark", "Finland"],
