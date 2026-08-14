@@ -54,6 +54,7 @@ const defaultFilters: JobFilters = {
 
 function Dashboard() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<JobFilters>(defaultFilters);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Job | null>(null);
