@@ -14,7 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      jobs: {
+        Row: {
+          city: string | null
+          company: string
+          contract_type: string
+          country: string
+          date_added: string
+          duration: string | null
+          id: string
+          language: Json
+          last_verified: string
+          match_score: number
+          match_summary: string | null
+          missing_requirements: string[]
+          partial_matches: string[]
+          publication_date: string
+          recommendation: string
+          red_flags: string[]
+          role_category: string
+          role_title_group: string | null
+          source: string | null
+          status: string
+          strong_matches: string[]
+          title: string
+          transferable_experience: string[]
+          url: string | null
+          work_model: string
+        }
+        Insert: {
+          city?: string | null
+          company: string
+          contract_type: string
+          country: string
+          date_added?: string
+          duration?: string | null
+          id?: string
+          language?: Json
+          last_verified?: string
+          match_score?: number
+          match_summary?: string | null
+          missing_requirements?: string[]
+          partial_matches?: string[]
+          publication_date: string
+          recommendation?: string
+          red_flags?: string[]
+          role_category: string
+          role_title_group?: string | null
+          source?: string | null
+          status?: string
+          strong_matches?: string[]
+          title: string
+          transferable_experience?: string[]
+          url?: string | null
+          work_model: string
+        }
+        Update: {
+          city?: string | null
+          company?: string
+          contract_type?: string
+          country?: string
+          date_added?: string
+          duration?: string | null
+          id?: string
+          language?: Json
+          last_verified?: string
+          match_score?: number
+          match_summary?: string | null
+          missing_requirements?: string[]
+          partial_matches?: string[]
+          publication_date?: string
+          recommendation?: string
+          red_flags?: string[]
+          role_category?: string
+          role_title_group?: string | null
+          source?: string | null
+          status?: string
+          strong_matches?: string[]
+          title?: string
+          transferable_experience?: string[]
+          url?: string | null
+          work_model?: string
+        }
+        Relationships: []
+      }
+      search_runs: {
+        Row: {
+          id: string
+          jobs_added: number
+          jobs_found: number
+          jobs_removed: number
+          search_criteria: Json
+          search_date: string
+        }
+        Insert: {
+          id?: string
+          jobs_added?: number
+          jobs_found?: number
+          jobs_removed?: number
+          search_criteria?: Json
+          search_date?: string
+        }
+        Update: {
+          id?: string
+          jobs_added?: number
+          jobs_found?: number
+          jobs_removed?: number
+          search_criteria?: Json
+          search_date?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
