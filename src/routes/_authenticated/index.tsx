@@ -123,6 +123,13 @@ function Dashboard() {
 
   const sortByScore = (list: Job[]) => [...list].sort((a, b) => b.match_score - a.match_score);
 
+  const handleSignOut = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  };
+
   return (
     <div className="bg-background min-h-screen">
       <header className="bg-surface-header text-surface-header-foreground">
