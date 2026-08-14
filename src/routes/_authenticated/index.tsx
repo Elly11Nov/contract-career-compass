@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -20,6 +20,7 @@ import {
 } from "@/services/jobService";
 import { filterJobs, isNewSince, isQualifying } from "@/lib/job-utils";
 import { runJobSearch } from "@/services/jobSearchService";
+import { supabase } from "@/integrations/supabase/client";
 import type { Job, JobFilters, JobStatus } from "@/types/job";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -142,6 +143,9 @@ function Dashboard() {
               disabled={searchMutation.isPending}
             >
               {searchMutation.isPending ? "Searching…" : "Run search"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleSignOut}>
+              Sign out
             </Button>
           </div>
         </div>
