@@ -81,9 +81,7 @@ export function buildQueries(): string[] {
   return queries;
 }
 
-function _unused() {
-  return queries;
-}
+
 
 type ProviderHit = { url: string; title?: string; description?: string; markdown?: string };
 
