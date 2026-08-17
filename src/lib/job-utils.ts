@@ -1,5 +1,8 @@
 import type { Job, JobFilters } from "@/types/job";
 
+/** Central European Time (handles CET/CEST automatically). */
+const TIME_ZONE = "Europe/Zurich";
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
     day: "2-digit",
