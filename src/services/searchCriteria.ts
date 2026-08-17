@@ -73,6 +73,7 @@ export const SEARCH_CONTRACT_TYPES: ContractType[] = [
   "Contractor",
   "Consulting assignment",
   "Interim",
+  "Permanent",
 ];
 
 export const MAX_AGE_DAYS = 15;

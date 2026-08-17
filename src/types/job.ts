@@ -16,7 +16,8 @@ export type ContractType =
   | "Project-based"
   | "Contractor"
   | "Consulting assignment"
-  | "Interim";
+  | "Interim"
+  | "Permanent";
 
 export type WorkModel = "Remote" | "Hybrid" | "Onsite";
 
@@ -115,6 +116,7 @@ export const CONTRACT_TYPES: ContractType[] = [
   "Contractor",
   "Consulting assignment",
   "Interim",
+  "Permanent",
 ];
 
 export const COUNTRIES: Country[] = [
