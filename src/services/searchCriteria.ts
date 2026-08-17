@@ -78,12 +78,35 @@ export const SEARCH_CONTRACT_TYPES: ContractType[] = [
 
 export const MAX_AGE_DAYS = 15;
 
+/**
+ * Targeted contract/freelance job boards and agencies per country.
+ * Used to build `site:` discovery queries in addition to the open web search.
+ * Sources only widen discovery — every hit still passes the unchanged
+ * qualification, verification and scoring rules.
+ */
+export const SEARCH_SITES: Record<Country, string[]> = {
+  Germany: [
+    "freelance.de",
+    "freelancermap.de",
+    "gulp.de",
+    "hays.de",
+    "experis.de",
+    "stepstone.de",
+  ],
+  France: ["malt.fr", "free-work.com", "freelance-info.fr", "welcometothejungle.com", "hays.fr"],
+  Switzerland: ["freelance.ch", "gulp.ch", "hays.ch", "jobs.ch", "experis.ch"],
+  Sweden: ["brainville.com", "onsiter.com", "keyman.se", "emagine.se", "thehub.io"],
+  Denmark: ["prodata-consult.com", "onsiter.com", "emagine.dk", "ework.dk", "thehub.io"],
+  Finland: ["onsiter.com", "witted.com", "duunitori.fi", "oikotie.fi", "emagine.fi"],
+};
+
 export const SEARCH_CRITERIA = {
   roles: [...TECHNICAL_WRITING_TITLES, ...BUSINESS_ANALYSIS_TITLES],
   countries: SEARCH_COUNTRIES,
   contract_types: SEARCH_CONTRACT_TYPES,
   language: "English",
   max_age_days: MAX_AGE_DAYS,
+  sites: SEARCH_SITES,
 };
 
 /** Candidate profile the scoring engine matches vacancies against. */
