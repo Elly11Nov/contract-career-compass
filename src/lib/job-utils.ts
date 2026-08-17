@@ -1,11 +1,14 @@
 import type { Job, JobFilters } from "@/types/job";
 
+/** Central European Time (handles CET/CEST automatically). */
+const TIME_ZONE = "Europe/Zurich";
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: TIME_ZONE,
   });
 }
 
@@ -15,7 +18,8 @@ export function formatDateTime(iso: string): string {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: TIME_ZONE,
+    timeZoneName: "short",
   });
 }
 
