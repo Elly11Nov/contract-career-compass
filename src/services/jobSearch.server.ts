@@ -16,6 +16,7 @@ import {
   MAX_AGE_DAYS,
   SEARCH_CONTRACT_TYPES,
   SEARCH_COUNTRIES,
+  SEARCH_SITES,
   TECHNICAL_WRITING_TITLES,
 } from "./searchCriteria";
 import type { CandidateJob, SearchEngineResult } from "./jobSearch.types";
@@ -151,12 +152,26 @@ export function buildQueries(): string[] {
     if (BUSINESS_ANALYSIS_TITLES[i]) titles.push(BUSINESS_ANALYSIS_TITLES[i]!);
   }
   // Rotate countries per title so a truncated slice also spans all countries.
-  const queries: string[] = [];
+  const openQueries: string[] = [];
+  const siteQueries: string[] = [];
   for (let pass = 0; pass < SEARCH_COUNTRIES.length; pass += 1) {
     titles.forEach((title, index) => {
       const country = SEARCH_COUNTRIES[(index + pass) % SEARCH_COUNTRIES.length]!;
-      queries.push(`"${title}" ${contractWords} job ${country} English`);
+      openQueries.push(`"${title}" ${contractWords} job ${country} English`);
+      // Board/agency-targeted discovery for the same title+country.
+      const sites = SEARCH_SITES[country] ?? [];
+      if (sites.length > 0) {
+        const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
+        siteQueries.push(`"${title}" (${siteFilter}) ${country} English`);
+      }
     });
+  }
+  // Interleave so any truncated slice still hits both open web and boards.
+  const queries: string[] = [];
+  const longest = Math.max(openQueries.length, siteQueries.length);
+  for (let i = 0; i < longest; i += 1) {
+    if (openQueries[i]) queries.push(openQueries[i]!);
+    if (siteQueries[i]) queries.push(siteQueries[i]!);
   }
   return queries;
 }
