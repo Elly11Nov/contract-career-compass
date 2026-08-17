@@ -140,7 +140,8 @@ function firecrawlRequest(path: string, body: unknown) {
 
 /** Build the provider queries from the configured criteria. */
 export function buildQueries(): string[] {
-  const contractWords = "contract OR freelance OR interim OR \"fixed-term\" OR consultant";
+  const contractWords =
+    "contract OR freelance OR interim OR \"fixed-term\" OR consultant OR permanent";
   // Interleave the two role families so any truncated slice of the query list
   // still covers documentation AND requirements/analysis vocabulary.
   const titles: string[] = [];
@@ -303,8 +304,10 @@ const EXTRACTION_SCHEMA = `{
 function verificationPrompt(todayIso: string) {
   return `You verify and score job advertisements. Today is ${todayIso}.
 
+Permanent employment (unbefristet / Festanstellung / CDI / tillsvidare) IS accepted:
+classify it as contract_type "Permanent". Contract/freelance/interim work is still preferred.
+
 REJECT (qualifies=false) a vacancy when ANY of the following is true:
-- it is permanent employment rather than contract/freelance/temporary/fixed-term/project-based/consulting
 - the country is not one of ${SEARCH_COUNTRIES.join(", ")}
 - the publication date is unknown or older than ${MAX_AGE_DAYS} days
 - a local language is mandatory as the primary working language, or English is not a working language.
