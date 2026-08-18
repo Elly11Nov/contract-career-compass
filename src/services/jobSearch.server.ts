@@ -194,16 +194,32 @@ export function buildQueries(): string[] {
 
 type ProviderHit = { url: string; title?: string; description?: string; markdown?: string };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Rate limits (429) and upstream blips (5xx) are transient — retry with backoff. */
 async function providerSearch(query: string, limit: number): Promise<ProviderHit[]> {
-  const res = await firecrawlRequest("/search", {
-    query,
-    limit,
-    tbs: "qdr:m",
-    scrapeOptions: { formats: ["markdown"] },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Web search failed [${res.status}]: ${text}`);
+  const MAX_ATTEMPTS = 4;
+  let res: Response | undefined;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    res = await firecrawlRequest("/search", {
+      query,
+      limit,
+      tbs: "qdr:m",
+      scrapeOptions: { formats: ["markdown"] },
+    });
+    if (res.ok) break;
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt === MAX_ATTEMPTS) break;
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? retryAfter * 1000
+      : 2_000 * 2 ** (attempt - 1) + Math.floor(Math.random() * 500);
+    await res.text().catch(() => undefined);
+    await sleep(Math.min(waitMs, 15_000));
+  }
+  if (!res || !res.ok) {
+    const text = res ? await res.text() : "no response";
+    throw new Error(`Web search failed [${res?.status ?? 0}]: ${text}`);
   }
   // Firecrawl v2 returns { success, data: { web: [...], news?: [...] } }.
   // Older/direct shapes return a flat array in `data` or a top-level `web` array.
@@ -597,14 +613,26 @@ export async function runSearchEngine(options?: {
   const queries = buildQueries().slice(0, maxQueries);
   const seenUrls = new Set<string>();
   const hits: ProviderHit[] = [];
+  const queryFailures: string[] = [];
 
   for (const query of queries) {
-    const results = await providerSearch(query, resultsPerQuery);
-    for (const hit of results) {
-      if (!hit.url || seenUrls.has(hit.url)) continue;
-      seenUrls.add(hit.url);
-      hits.push(hit);
+    try {
+      const results = await providerSearch(query, resultsPerQuery);
+      for (const hit of results) {
+        if (!hit.url || seenUrls.has(hit.url)) continue;
+        seenUrls.add(hit.url);
+        hits.push(hit);
+      }
+    } catch (error) {
+      // A single query failing (rate limit, upstream blip) must not abort the run.
+      queryFailures.push(error instanceof Error ? error.message : String(error));
+      console.error("[jobSearch] query failed:", query, error);
     }
+    // Pace requests so the provider's per-minute rate limit is not tripped.
+    await sleep(1_200);
+  }
+  if (hits.length === 0 && queryFailures.length > 0) {
+    throw new Error(queryFailures[0]!);
   }
 
   const jobs: CandidateJob[] = [];
