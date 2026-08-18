@@ -64,6 +64,15 @@ export const SEARCH_COUNTRIES: Country[] = [
   "Finland",
 ];
 
+/**
+ * Titles that must be covered in every search run, for every country,
+ * before the rotating role vocabulary is used.
+ */
+export const PRIORITY_TITLES = [
+  "Requirements Engineer",
+  "Requirements Engineering",
+];
+
 export const SEARCH_CONTRACT_TYPES: ContractType[] = [
   "Contract",
   "Freelance",
