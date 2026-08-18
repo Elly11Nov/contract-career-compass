@@ -14,6 +14,7 @@ import {
   BUSINESS_ANALYSIS_TITLES,
   CANDIDATE_PROFILE,
   MAX_AGE_DAYS,
+  PRIORITY_TITLES,
   SEARCH_CONTRACT_TYPES,
   SEARCH_COUNTRIES,
   SEARCH_SITES,
@@ -143,6 +144,19 @@ function firecrawlRequest(path: string, body: unknown) {
 export function buildQueries(): string[] {
   const contractWords =
     "contract OR freelance OR interim OR \"fixed-term\" OR consultant OR permanent";
+  // Priority vocabulary: guaranteed coverage for every country on every run,
+  // even when the query budget truncates the rotating list below.
+  const priorityQueries: string[] = [];
+  for (const country of SEARCH_COUNTRIES) {
+    for (const title of PRIORITY_TITLES) {
+      priorityQueries.push(`"${title}" ${contractWords} job ${country} English`);
+    }
+    const sites = SEARCH_SITES[country] ?? [];
+    if (sites.length > 0) {
+      const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
+      priorityQueries.push(`"${PRIORITY_TITLES[0]}" (${siteFilter}) ${country} English`);
+    }
+  }
   // Interleave the two role families so any truncated slice of the query list
   // still covers documentation AND requirements/analysis vocabulary.
   const titles: string[] = [];
@@ -173,7 +187,7 @@ export function buildQueries(): string[] {
     if (openQueries[i]) queries.push(openQueries[i]!);
     if (siteQueries[i]) queries.push(siteQueries[i]!);
   }
-  return queries;
+  return [...priorityQueries, ...queries];
 }
 
 
