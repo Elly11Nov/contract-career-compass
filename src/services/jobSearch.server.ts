@@ -555,7 +555,7 @@ async function extractAndScore(
     match_summary: String(parsed["match_summary"] ?? ""),
     strong_matches: (parsed["strong_matches"] as string[]) ?? [],
     partial_matches: (parsed["partial_matches"] as string[]) ?? [],
-    missing_requirements: (parsed["missing_requirements"] as string[]) ?? [],
+    missing_requirements: sanitizeMissing((parsed["missing_requirements"] as string[]) ?? []),
     transferable_experience: (parsed["transferable_experience"] as string[]) ?? [],
     red_flags: (parsed["red_flags"] as string[]) ?? [],
     last_verified: new Date().toISOString(),
