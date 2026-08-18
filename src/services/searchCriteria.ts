@@ -92,12 +92,20 @@ export const SEARCH_SITES: Record<Country, string[]> = {
     "hays.de",
     "experis.de",
     "stepstone.de",
+    "linkedin.com/jobs",
   ],
-  France: ["malt.fr", "free-work.com", "freelance-info.fr", "welcometothejungle.com", "hays.fr"],
-  Switzerland: ["freelance.ch", "gulp.ch", "hays.ch", "jobs.ch", "experis.ch"],
-  Sweden: ["brainville.com", "onsiter.com", "keyman.se", "emagine.se", "thehub.io"],
-  Denmark: ["prodata-consult.com", "onsiter.com", "emagine.dk", "ework.dk", "thehub.io"],
-  Finland: ["onsiter.com", "witted.com", "duunitori.fi", "oikotie.fi", "emagine.fi"],
+  France: [
+    "malt.fr",
+    "free-work.com",
+    "freelance-info.fr",
+    "welcometothejungle.com",
+    "hays.fr",
+    "linkedin.com/jobs",
+  ],
+  Switzerland: ["freelance.ch", "gulp.ch", "hays.ch", "jobs.ch", "experis.ch", "linkedin.com/jobs"],
+  Sweden: ["brainville.com", "onsiter.com", "keyman.se", "emagine.se", "linkedin.com/jobs"],
+  Denmark: ["prodata-consult.com", "onsiter.com", "emagine.dk", "ework.dk", "linkedin.com/jobs"],
+  Finland: ["onsiter.com", "witted.com", "duunitori.fi", "oikotie.fi", "linkedin.com/jobs"],
 };
 
 export const SEARCH_CRITERIA = {
