@@ -387,6 +387,39 @@ const EXTRACTION_SCHEMA = `{
 }`;
 
 function verificationPrompt(todayIso: string) {
+  return buildPrompt(todayIso);
+}
+
+/** Skills the candidate already has — never valid as "missing requirements". */
+const PROFILE_SKILLS = [
+  "dita",
+  "xml",
+  "docs-as-code",
+  "docs as code",
+  "git",
+  "confluence",
+  "jira",
+  "agile",
+  "ci/cd",
+  "swagger",
+  "openapi",
+  "postman",
+  "sql",
+  "api documentation",
+  "technical writing",
+  "enterprise software documentation",
+  "database",
+  "ai-assisted",
+];
+
+function sanitizeMissing(items: string[]): string[] {
+  return items.filter((item) => {
+    const t = String(item).toLowerCase();
+    return !PROFILE_SKILLS.some((skill) => t.includes(skill));
+  });
+}
+
+function buildPrompt(todayIso: string) {
   return `You verify and score job advertisements. Today is ${todayIso}.
 
 Permanent employment (unbefristet / Festanstellung / CDI / tillsvidare) IS accepted:
@@ -407,6 +440,17 @@ judge whether the candidate genuinely satisfies each stated requirement, and tre
 Business Analyst / Requirements Engineering roles as transferable fit.
 Bands: 90-100 Excellent, 80-89 Strong, 70-79 Good, 60-69 Possible, below 60 Weak.
 recommendation: "Apply" for >=80, "Maybe" for 60-79, "Don't apply" below 60.
+
+FIELD SEMANTICS — follow exactly, these are judged FROM THE CANDIDATE'S POINT OF VIEW:
+- strong_matches: requirements stated in the ADVERTISEMENT that the candidate clearly meets.
+- partial_matches: advertisement requirements the candidate partly or indirectly meets.
+- missing_requirements: ONLY requirements stated in the ADVERTISEMENT that the candidate
+  does NOT have. Never list a skill that appears in the candidate profile above
+  (e.g. DITA, Git, Swagger/OpenAPI, SQL, API documentation) as missing — the candidate has it.
+  Never copy the candidate profile into this field. If the candidate meets every stated
+  requirement, return an empty array.
+- transferable_experience: candidate experience that substitutes for a stated requirement.
+- red_flags: concerns in the advertisement itself (unclear scope, language, rate, seniority mismatch).
 
 Reply with JSON only, matching exactly:
 ${EXTRACTION_SCHEMA}`;
@@ -511,7 +555,7 @@ async function extractAndScore(
     match_summary: String(parsed["match_summary"] ?? ""),
     strong_matches: (parsed["strong_matches"] as string[]) ?? [],
     partial_matches: (parsed["partial_matches"] as string[]) ?? [],
-    missing_requirements: (parsed["missing_requirements"] as string[]) ?? [],
+    missing_requirements: sanitizeMissing((parsed["missing_requirements"] as string[]) ?? []),
     transferable_experience: (parsed["transferable_experience"] as string[]) ?? [],
     red_flags: (parsed["red_flags"] as string[]) ?? [],
     last_verified: new Date().toISOString(),
