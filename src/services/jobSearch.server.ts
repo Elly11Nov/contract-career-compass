@@ -387,6 +387,39 @@ const EXTRACTION_SCHEMA = `{
 }`;
 
 function verificationPrompt(todayIso: string) {
+  return buildPrompt(todayIso);
+}
+
+/** Skills the candidate already has — never valid as "missing requirements". */
+const PROFILE_SKILLS = [
+  "dita",
+  "xml",
+  "docs-as-code",
+  "docs as code",
+  "git",
+  "confluence",
+  "jira",
+  "agile",
+  "ci/cd",
+  "swagger",
+  "openapi",
+  "postman",
+  "sql",
+  "api documentation",
+  "technical writing",
+  "enterprise software documentation",
+  "database",
+  "ai-assisted",
+];
+
+function sanitizeMissing(items: string[]): string[] {
+  return items.filter((item) => {
+    const t = String(item).toLowerCase();
+    return !PROFILE_SKILLS.some((skill) => t.includes(skill));
+  });
+}
+
+function buildPrompt(todayIso: string) {
   return `You verify and score job advertisements. Today is ${todayIso}.
 
 Permanent employment (unbefristet / Festanstellung / CDI / tillsvidare) IS accepted:
