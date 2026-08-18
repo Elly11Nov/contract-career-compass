@@ -206,6 +206,62 @@ async function providerSearch(query: string, limit: number): Promise<ProviderHit
   return json.web ?? json.results ?? [];
 }
 
+/**
+ * Direct-fetch fallback for advertisements the scrape provider refuses
+ * (LinkedIn and similar). Returns readable text extracted from the live page,
+ * including the JSON-LD JobPosting payload when the page exposes one, so the
+ * verification step still judges the real advertisement content.
+ */
+export async function fetchAdvertisementText(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en",
+      },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    if (!html) return null;
+
+    const parts: string[] = [];
+    const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1];
+    if (title) parts.push(title.trim());
+
+    // JSON-LD JobPosting carries datePosted / hiringOrganization / employmentType.
+    const ldMatches = html.matchAll(
+      /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+    );
+    for (const m of ldMatches) {
+      const raw = m[1]?.trim();
+      if (!raw || !/JobPosting/i.test(raw)) continue;
+      parts.push(raw.slice(0, 20_000));
+    }
+
+    const body = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&#39;|&rsquo;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (body.length > 200) parts.push(body.slice(0, 30_000));
+
+    const text = parts.join("\n\n").trim();
+    return text.length > 200 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Open the actual advertisement so fields can be verified against the source. */
 export async function scrapeAdvertisement(url: string): Promise<string | null> {
   try {
@@ -214,11 +270,11 @@ export async function scrapeAdvertisement(url: string): Promise<string | null> {
       formats: ["markdown"],
       onlyMainContent: true,
     });
-    if (!res.ok) return null;
+    if (!res.ok) return fetchAdvertisementText(url);
     const json = (await res.json()) as { markdown?: string; data?: { markdown?: string } };
-    return json.markdown ?? json.data?.markdown ?? null;
+    return json.markdown ?? json.data?.markdown ?? (await fetchAdvertisementText(url));
   } catch {
-    return null;
+    return fetchAdvertisementText(url);
   }
 }
 
