@@ -546,7 +546,7 @@ export async function runSearchEngine(options?: {
   maxQueries?: number;
   resultsPerQuery?: number;
 }): Promise<SearchEngineResult> {
-  const maxQueries = options?.maxQueries ?? 10;
+  const maxQueries = options?.maxQueries ?? 26;
   const resultsPerQuery = options?.resultsPerQuery ?? 5;
   const todayIso = new Date().toISOString().slice(0, 10);
 
