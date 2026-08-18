@@ -73,15 +73,6 @@ export const PRIORITY_TITLES = [
   "Requirements Engineering",
 ];
 
-const _UNUSED_SEARCH_COUNTRIES: Country[] = [
-  "Germany",
-  "France",
-  "Switzerland",
-  "Sweden",
-  "Denmark",
-  "Finland",
-];
-
 export const SEARCH_CONTRACT_TYPES: ContractType[] = [
   "Contract",
   "Freelance",
