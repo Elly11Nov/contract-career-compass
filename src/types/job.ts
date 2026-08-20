@@ -2,6 +2,7 @@ export type Country =
   | "Germany"
   | "France"
   | "Switzerland"
+  | "Italy"
   | "Sweden"
   | "Denmark"
   | "Finland";
@@ -123,6 +124,7 @@ export const COUNTRIES: Country[] = [
   "Germany",
   "France",
   "Switzerland",
+  "Italy",
   "Sweden",
   "Denmark",
   "Finland",
