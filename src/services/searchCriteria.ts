@@ -63,7 +63,17 @@ export const SEARCH_COUNTRIES: Country[] = [
   "Sweden",
   "Denmark",
   "Finland",
+  "Czechia",
+  "Hungary",
+  "Poland",
+  "Romania",
 ];
+
+/**
+ * Countries included for contract-style work only.
+ * Permanent employment in these countries is rejected.
+ */
+export const CONTRACT_ONLY_COUNTRIES: Country[] = ["Czechia", "Hungary", "Poland", "Romania"];
 
 /**
  * Titles that must be covered in every search run, for every country,
@@ -124,6 +134,10 @@ export const SEARCH_SITES: Record<Country, string[]> = {
   Sweden: ["brainville.com", "onsiter.com", "keyman.se", "emagine.se", "linkedin.com/jobs"],
   Denmark: ["prodata-consult.com", "onsiter.com", "emagine.dk", "ework.dk", "linkedin.com/jobs"],
   Finland: ["onsiter.com", "witted.com", "duunitori.fi", "oikotie.fi", "linkedin.com/jobs"],
+  Czechia: ["jobs.cz", "startupjobs.cz", "cz.indeed.com", "hays.cz", "linkedin.com/jobs"],
+  Hungary: ["profession.hu", "hu.indeed.com", "hays.hu", "cvonline.hu", "linkedin.com/jobs"],
+  Poland: ["nofluffjobs.com", "justjoin.it", "pracuj.pl", "hays.pl", "linkedin.com/jobs"],
+  Romania: ["ejobs.ro", "bestjobs.eu", "hipo.ro", "ro.indeed.com", "linkedin.com/jobs"],
 };
 
 export const SEARCH_CRITERIA = {
