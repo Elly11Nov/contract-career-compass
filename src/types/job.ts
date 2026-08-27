@@ -5,7 +5,11 @@ export type Country =
   | "Italy"
   | "Sweden"
   | "Denmark"
-  | "Finland";
+  | "Finland"
+  | "Czechia"
+  | "Hungary"
+  | "Poland"
+  | "Romania";
 
 export type RoleCategory = "Technical Writer" | "Business Analyst" | "Related";
 
@@ -128,6 +132,10 @@ export const COUNTRIES: Country[] = [
   "Sweden",
   "Denmark",
   "Finland",
+  "Czechia",
+  "Hungary",
+  "Poland",
+  "Romania",
 ];
 
 export const WORK_MODELS: WorkModel[] = ["Remote", "Hybrid", "Onsite"];

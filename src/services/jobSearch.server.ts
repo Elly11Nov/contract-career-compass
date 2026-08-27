@@ -17,6 +17,7 @@ import {
   PRIORITY_TITLES,
   SEARCH_CONTRACT_TYPES,
   SEARCH_COUNTRIES,
+  CONTRACT_ONLY_COUNTRIES,
   SEARCH_SITES,
   TECHNICAL_WRITING_TITLES,
 } from "./searchCriteria";
@@ -92,6 +93,8 @@ function hardCriteriaReason(job: CandidateJob): RejectionReason | null {
   if (!isPlausibleVacancyUrl(job.url)) return "not_a_vacancy_url";
   if (!SEARCH_COUNTRIES.includes(job.country)) return "country_out_of_scope";
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return "permanent_role";
+  if (CONTRACT_ONLY_COUNTRIES.includes(job.country) && job.contract_type === "Permanent")
+    return "permanent_role";
   const published = Date.parse(job.publication_date);
   if (Number.isNaN(published)) return "publication_date_out_of_range";
   const ageDays = (Date.now() - published) / 86_400_000;
@@ -443,6 +446,8 @@ classify it as contract_type "Permanent". Contract/freelance/interim work is sti
 
 REJECT (qualifies=false) a vacancy when ANY of the following is true:
 - the country is not one of ${SEARCH_COUNTRIES.join(", ")}
+- the vacancy is permanent employment AND the country is one of ${CONTRACT_ONLY_COUNTRIES.join(", ")}
+  (these countries are in scope for contract, freelance, interim and fixed-term work only)
 - the publication date is unknown or older than ${MAX_AGE_DAYS} days
 - a local language is mandatory as the primary working language, or English is not a working language.
   Never assume English simply because the company is international — require evidence in the advertisement.
@@ -585,6 +590,8 @@ export function passesHardCriteria(job: CandidateJob): boolean {
   if (!isPlausibleVacancyUrl(job.url)) return false;
   if (!SEARCH_COUNTRIES.includes(job.country)) return false;
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return false;
+  if (CONTRACT_ONLY_COUNTRIES.includes(job.country) && job.contract_type === "Permanent")
+    return false;
   const published = Date.parse(job.publication_date);
   if (Number.isNaN(published)) return false;
   const ageDays = (Date.now() - published) / 86_400_000;
