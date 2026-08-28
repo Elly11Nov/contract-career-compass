@@ -92,9 +92,12 @@ function Dashboard() {
         );
         return;
       }
-      toast.success(`Search complete — ${result.jobs_added} new job(s) added`, {
-        description: `${result.examined} advertisements examined · ${result.jobs_found} qualifying · ${result.duplicates} duplicate(s) skipped`,
-      });
+      const description = `${result.examined} advertisements examined · ${result.already_known} already in your list (skipped) · ${result.jobs_found} qualifying · ${result.duplicates} duplicate(s)`;
+      if (result.jobs_added > 0) {
+        toast.success(`Search complete — ${result.jobs_added} new job(s) added`, { description });
+      } else {
+        toast.info("Search complete — no new vacancies matched", { description });
+      }
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["search-history"] });
     },
