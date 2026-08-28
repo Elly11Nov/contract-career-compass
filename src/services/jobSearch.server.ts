@@ -229,7 +229,12 @@ type ProviderHit = { url: string; title?: string; description?: string; markdown
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Rate limits (429) and upstream blips (5xx) are transient — retry with backoff. */
-async function providerSearch(query: string, limit: number): Promise<ProviderHit[]> {
+async function providerSearch(
+  built: BuiltQuery,
+  limit: number,
+): Promise<ProviderHit[]> {
+  const query = built.query;
+  const countryCode = COUNTRY_CODES[built.country];
   const MAX_ATTEMPTS = 4;
   let res: Response | undefined;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
@@ -237,8 +242,10 @@ async function providerSearch(query: string, limit: number): Promise<ProviderHit
       query,
       limit,
       tbs: "qdr:m",
+      ...(countryCode ? { location: { country: countryCode, languages: ["en"] } } : {}),
       scrapeOptions: { formats: ["markdown"] },
     });
+
     if (res.ok) break;
     const retryable = res.status === 429 || res.status >= 500;
     if (!retryable || attempt === MAX_ATTEMPTS) break;
