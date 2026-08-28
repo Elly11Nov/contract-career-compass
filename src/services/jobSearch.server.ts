@@ -147,19 +147,23 @@ function firecrawlRequest(path: string, body: unknown) {
 export function buildQueries(): string[] {
   const contractWords =
     "contract OR freelance OR interim OR \"fixed-term\" OR consultant OR permanent";
-  // Priority vocabulary: guaranteed coverage for every country on every run,
-  // even when the query budget truncates the rotating list below.
+  // Priority vocabulary: guaranteed coverage for every country on every run.
+  // Ordered country-round-robin (one query per country per round) so a truncated
+  // query budget never starves the countries listed last.
   const priorityQueries: string[] = [];
-  for (const country of SEARCH_COUNTRIES) {
-    for (const title of PRIORITY_TITLES) {
+  for (const title of PRIORITY_TITLES) {
+    for (const country of SEARCH_COUNTRIES) {
       priorityQueries.push(`"${title}" ${contractWords} job ${country} English`);
     }
+  }
+  for (const country of SEARCH_COUNTRIES) {
     const sites = SEARCH_SITES[country] ?? [];
     if (sites.length > 0) {
       const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
       priorityQueries.push(`"${PRIORITY_TITLES[0]}" (${siteFilter}) ${country} English`);
     }
   }
+
   // Interleave the two role families so any truncated slice of the query list
   // still covers documentation AND requirements/analysis vocabulary.
   const titles: string[] = [];
