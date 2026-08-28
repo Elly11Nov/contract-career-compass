@@ -388,7 +388,16 @@ export async function fetchAdvertisementText(url: string): Promise<string | null
 }
 
 /** Open the actual advertisement so fields can be verified against the source. */
-export async function scrapeAdvertisement(url: string): Promise<string | null> {
+export async function scrapeAdvertisement(
+  url: string,
+  prefetchedMarkdown?: string,
+): Promise<string | null> {
+  // /search already requested markdown. Reuse a substantive prefetched page
+  // instead of opening the same advertisement a second time.
+  if (prefetchedMarkdown && prefetchedMarkdown.trim().length >= 400) {
+    return prefetchedMarkdown.trim();
+  }
+
   try {
     const res = await firecrawlRequest(
       "/scrape",
@@ -396,8 +405,9 @@ export async function scrapeAdvertisement(url: string): Promise<string | null> {
         url,
         formats: ["markdown"],
         onlyMainContent: true,
+        timeout: 35_000,
       },
-      60_000,
+      45_000,
     );
     if (!res.ok) return fetchAdvertisementText(url);
     const json = (await res.json()) as { markdown?: string; data?: { markdown?: string } };
