@@ -143,25 +143,53 @@ function firecrawlRequest(path: string, body: unknown) {
   return fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
 }
 
+/** ISO country codes so the provider can geo-target each query. */
+const COUNTRY_CODES: Record<string, string> = {
+  Germany: "DE",
+  France: "FR",
+  Switzerland: "CH",
+  Italy: "IT",
+  Sweden: "SE",
+  Denmark: "DK",
+  Finland: "FI",
+  Czechia: "CZ",
+  Hungary: "HU",
+  Poland: "PL",
+  Romania: "RO",
+};
+
+export type BuiltQuery = { query: string; country: string };
+
 /** Build the provider queries from the configured criteria. */
-export function buildQueries(): string[] {
-  const contractWords =
-    "contract OR freelance OR interim OR \"fixed-term\" OR consultant OR permanent";
-  // Priority vocabulary: guaranteed coverage for every country on every run.
-  // Ordered country-round-robin (one query per country per round) so a truncated
-  // query budget never starves the countries listed last.
-  const priorityQueries: string[] = [];
+export function buildQueries(): BuiltQuery[] {
+  // Short, precise queries: long OR-chains dilute the ranking and return
+  // unrelated aggregator pages. Geo-targeting is handled by the provider
+  // `location` option instead of stuffing the country into the query.
+  const contractWords = (country: string) =>
+    CONTRACT_ONLY_COUNTRIES.includes(country as (typeof CONTRACT_ONLY_COUNTRIES)[number])
+      ? "contract OR freelance OR interim"
+      : "contract OR freelance OR interim OR permanent";
+
+  const open = (title: string, country: string) => ({
+    query: `"${title}" job vacancy ${country} ${contractWords(country)}`,
+    country,
+  });
+  const board = (title: string, country: string): BuiltQuery | null => {
+    const sites = SEARCH_SITES[country as keyof typeof SEARCH_SITES] ?? [];
+    if (sites.length === 0) return null;
+    const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
+    return { query: `"${title}" (${siteFilter})`, country };
+  };
+
+  // Priority vocabulary: guaranteed coverage for every country on every run,
+  // ordered country-round-robin so a truncated budget never starves a country.
+  const priorityQueries: BuiltQuery[] = [];
   for (const title of PRIORITY_TITLES) {
-    for (const country of SEARCH_COUNTRIES) {
-      priorityQueries.push(`"${title}" ${contractWords} job ${country} English`);
-    }
+    for (const country of SEARCH_COUNTRIES) priorityQueries.push(open(title, country));
   }
   for (const country of SEARCH_COUNTRIES) {
-    const sites = SEARCH_SITES[country] ?? [];
-    if (sites.length > 0) {
-      const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
-      priorityQueries.push(`"${PRIORITY_TITLES[0]}" (${siteFilter}) ${country} English`);
-    }
+    const q = board(PRIORITY_TITLES[0]!, country);
+    if (q) priorityQueries.push(q);
   }
 
   // Interleave the two role families so any truncated slice of the query list
@@ -173,22 +201,18 @@ export function buildQueries(): string[] {
     if (BUSINESS_ANALYSIS_TITLES[i]) titles.push(BUSINESS_ANALYSIS_TITLES[i]!);
   }
   // Rotate countries per title so a truncated slice also spans all countries.
-  const openQueries: string[] = [];
-  const siteQueries: string[] = [];
+  const openQueries: BuiltQuery[] = [];
+  const siteQueries: BuiltQuery[] = [];
   for (let pass = 0; pass < SEARCH_COUNTRIES.length; pass += 1) {
     titles.forEach((title, index) => {
       const country = SEARCH_COUNTRIES[(index + pass) % SEARCH_COUNTRIES.length]!;
-      openQueries.push(`"${title}" ${contractWords} job ${country} English`);
-      // Board/agency-targeted discovery for the same title+country.
-      const sites = SEARCH_SITES[country] ?? [];
-      if (sites.length > 0) {
-        const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
-        siteQueries.push(`"${title}" (${siteFilter}) ${country} English`);
-      }
+      openQueries.push(open(title, country));
+      const q = board(title, country);
+      if (q) siteQueries.push(q);
     });
   }
   // Interleave so any truncated slice still hits both open web and boards.
-  const queries: string[] = [];
+  const queries: BuiltQuery[] = [];
   const longest = Math.max(openQueries.length, siteQueries.length);
   for (let i = 0; i < longest; i += 1) {
     if (openQueries[i]) queries.push(openQueries[i]!);
@@ -196,6 +220,7 @@ export function buildQueries(): string[] {
   }
   return [...priorityQueries, ...queries];
 }
+
 
 
 
