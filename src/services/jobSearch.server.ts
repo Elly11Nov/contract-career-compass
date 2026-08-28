@@ -617,7 +617,10 @@ export async function runSearchEngine(options?: {
   maxQueries?: number;
   resultsPerQuery?: number;
 }): Promise<SearchEngineResult> {
-  const maxQueries = options?.maxQueries ?? 26;
+  // Must be >= the number of priority queries (2 titles x 11 countries + 11 site
+  // queries = 33) so every country, including the contract-only ones, is searched.
+  const maxQueries = options?.maxQueries ?? 40;
+
   const resultsPerQuery = options?.resultsPerQuery ?? 5;
   const todayIso = new Date().toISOString().slice(0, 10);
 
