@@ -8,7 +8,10 @@ import type { SearchEngineResponse } from "./jobSearch.types";
  * client-side service layer through jobService.
  */
 export const searchJobCandidates = createServerFn({ method: "POST" })
-  .inputValidator((data: { maxQueries?: number; resultsPerQuery?: number } | undefined) => data ?? {})
+  .inputValidator(
+    (data: { maxQueries?: number; resultsPerQuery?: number; knownUrls?: string[] } | undefined) =>
+      data ?? {},
+  )
   .handler(async ({ data }): Promise<SearchEngineResponse> => {
     const { runSearchEngine, SearchProviderNotConfiguredError } = await import(
       "./jobSearch.server"

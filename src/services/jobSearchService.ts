@@ -20,6 +20,7 @@ export type RunJobSearchResult =
       ok: true;
       queries: string[];
       examined: number;
+      already_known: number;
       diagnostics?: CandidateDiagnostic[];
     } & JobSearchRunSummary)
   | { ok: false; error: string; provider_missing: boolean };
@@ -121,7 +122,12 @@ export async function runJobSearch(options?: {
   maxQueries?: number;
   resultsPerQuery?: number;
 }): Promise<RunJobSearchResult> {
-  const response = await searchJobCandidates({ data: options ?? {} });
+  // Send the URLs already stored so the engine skips them before spending
+  // any scraping or AI credits on vacancies that are already in the list.
+  const stored = await getJobs();
+  const response = await searchJobCandidates({
+    data: { ...(options ?? {}), knownUrls: stored.map((j) => j.url) },
+  });
   if (!response.ok) {
     return {
       ok: false,
@@ -131,6 +137,7 @@ export async function runJobSearch(options?: {
   }
 
   const { jobs, examined, queries, diagnostics } = response.result;
+  const alreadyKnown = response.result.already_known ?? 0;
   const qualifying = jobs.filter(verifyJob).map(scoreJob);
   const { added, duplicates } = await saveJobs(qualifying);
 
@@ -145,6 +152,7 @@ export async function runJobSearch(options?: {
     ok: true,
     queries,
     examined,
+    already_known: alreadyKnown,
     jobs_found: qualifying.length,
     jobs_added: added.length,
     jobs_removed: examined - qualifying.length,
