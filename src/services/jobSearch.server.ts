@@ -277,17 +277,26 @@ async function providerSearch(
   limit: number,
 ): Promise<ProviderHit[]> {
   const query = built.query;
-  const location = COUNTRY_CODES[built.country] ? built.country : undefined;
+  const countryCode = COUNTRY_CODES[built.country];
   const MAX_ATTEMPTS = 4;
   let res: Response | undefined;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    res = await firecrawlRequest("/search", {
-      query,
-      limit,
-      tbs: "qdr:m",
-      ...(location ? { location } : {}),
-      scrapeOptions: { formats: ["markdown"] },
-    });
+    res = await firecrawlRequest(
+      "/search",
+      {
+        query,
+        limit,
+        sources: ["web"],
+        // Sort by date, then constrain to the provider's one-month window; the
+        // code-side hard gate below enforces the configured 15-day age limit.
+        tbs: "sbd:1,qdr:m",
+        ...(countryCode ? { country: countryCode, location: built.country } : {}),
+        timeout: 45_000,
+        ignoreInvalidURLs: true,
+        scrapeOptions: { formats: ["markdown"] },
+      },
+      60_000,
+    );
 
     if (res.ok) break;
     const retryable = res.status === 429 || res.status >= 500;
