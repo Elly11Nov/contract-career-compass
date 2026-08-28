@@ -234,7 +234,7 @@ async function providerSearch(
   limit: number,
 ): Promise<ProviderHit[]> {
   const query = built.query;
-  const countryCode = COUNTRY_CODES[built.country];
+  const location = COUNTRY_CODES[built.country] ? built.country : undefined;
   const MAX_ATTEMPTS = 4;
   let res: Response | undefined;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
@@ -242,7 +242,7 @@ async function providerSearch(
       query,
       limit,
       tbs: "qdr:m",
-      ...(countryCode ? { location: { country: countryCode, languages: ["en"] } } : {}),
+      ...(location ? { location } : {}),
       scrapeOptions: { formats: ["markdown"] },
     });
 
