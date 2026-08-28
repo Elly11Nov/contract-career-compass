@@ -37,6 +37,7 @@ export interface SearchEngineResult {
   jobs: CandidateJob[];
   examined: number;
   rejected: number;
+  already_known?: number;
   queries: string[];
   diagnostics?: CandidateDiagnostic[];
 }
@@ -54,6 +55,7 @@ export type RejectionReason =
   | "publication_date_out_of_range"
   | "country_out_of_scope"
   | "role_not_relevant"
+  | "already_known"
   | "url_not_verified"
   | "other";
 

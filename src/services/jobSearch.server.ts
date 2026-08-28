@@ -718,9 +718,20 @@ function dedupeKey(job: CandidateJob) {
  * Full engine pass: search -> open advertisement -> verify -> score.
  * Returns verified, scored, de-duplicated candidate records (never persisted here).
  */
+/** Stable key used to recognise a vacancy URL that is already stored. */
+export function normalizeVacancyUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    return `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname.replace(/\/$/, "")}`.toLowerCase();
+  } catch {
+    return rawUrl.toLowerCase();
+  }
+}
+
 export async function runSearchEngine(options?: {
   maxQueries?: number;
   resultsPerQuery?: number;
+  knownUrls?: string[];
 }): Promise<SearchEngineResult> {
   // Must be >= the number of priority queries (2 titles x 11 countries + 11 site
   // queries = 33) so every country, including the contract-only ones, is searched.
@@ -784,7 +795,14 @@ export async function runSearchEngine(options?: {
 
   // Each hit performs scrape -> LLM verification -> final URL check. Six workers
   // substantially reduce wall-clock time without changing the order of results.
+  // Vacancies already stored are skipped before any page fetch or AI call:
+  // re-analysing them costs credits and can never produce a new job.
+  const knownUrls = new Set((options?.knownUrls ?? []).map(normalizeVacancyUrl));
+
   const outcomes = await mapWithConcurrency(hits, 6, async (hit): Promise<HitOutcome> => {
+    if (knownUrls.has(normalizeVacancyUrl(hit.url))) {
+      return { diagnostic: toDiagnostic(hit, "already_known") };
+    }
     if (!isPlausibleVacancyUrl(hit.url)) {
       return { diagnostic: toDiagnostic(hit, "not_a_vacancy_url") };
     }
@@ -826,7 +844,11 @@ export async function runSearchEngine(options?: {
   for (const outcome of outcomes) {
     if (outcome.diagnostic) {
       diagnostics.push(outcome.diagnostic);
-      if (outcome.diagnostic.reason !== "qualified") rejected += 1;
+      if (
+        outcome.diagnostic.reason !== "qualified" &&
+        outcome.diagnostic.reason !== "already_known"
+      )
+        rejected += 1;
     }
     if (!outcome.job) continue;
     const key = dedupeKey(outcome.job);
@@ -835,9 +857,12 @@ export async function runSearchEngine(options?: {
     jobs.push(outcome.job);
   }
 
+  const alreadyKnown = diagnostics.filter((d) => d.reason === "already_known").length;
+
   return {
     jobs,
     examined: hits.length,
+    already_known: alreadyKnown,
     rejected,
     queries: queries.map((q) => q.query),
     diagnostics,
