@@ -116,7 +116,7 @@ export class SearchProviderNotConfiguredError extends Error {
   }
 }
 
-function firecrawlRequest(path: string, body: unknown) {
+function firecrawlRequest(path: string, body: unknown, timeoutMs = 45_000) {
   const key = process.env["FIRECRAWL_API_KEY"];
   if (!key) {
     throw new SearchProviderNotConfiguredError(
@@ -140,7 +140,11 @@ function firecrawlRequest(path: string, body: unknown) {
   } else {
     headers["Authorization"] = `Bearer ${key}`;
   }
-  return fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  return fetchWithTimeout(
+    url,
+    { method: "POST", headers, body: JSON.stringify(body) },
+    timeoutMs,
+  );
 }
 
 /** ISO country codes so the provider can geo-target each query. */
@@ -228,23 +232,71 @@ type ProviderHit = { url: string; title?: string; description?: string; markdown
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Fetch with an explicit upper bound so one stuck site cannot stall a run. */
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Small worker pool: bounded parallelism without uncontrolled API fan-out. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(concurrency, items.length)) },
+    async () => {
+      for (;;) {
+        const index = nextIndex;
+        nextIndex += 1;
+        if (index >= items.length) return;
+        results[index] = await worker(items[index]!, index);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
+}
+
+
 /** Rate limits (429) and upstream blips (5xx) are transient — retry with backoff. */
 async function providerSearch(
   built: BuiltQuery,
   limit: number,
 ): Promise<ProviderHit[]> {
   const query = built.query;
-  const location = COUNTRY_CODES[built.country] ? built.country : undefined;
+  const countryCode = COUNTRY_CODES[built.country];
   const MAX_ATTEMPTS = 4;
   let res: Response | undefined;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    res = await firecrawlRequest("/search", {
-      query,
-      limit,
-      tbs: "qdr:m",
-      ...(location ? { location } : {}),
-      scrapeOptions: { formats: ["markdown"] },
-    });
+    res = await firecrawlRequest(
+      "/search",
+      {
+        query,
+        limit,
+        sources: ["web"],
+        // Sort by date, then constrain to the provider's one-month window; the
+        // code-side hard gate below enforces the configured 15-day age limit.
+        tbs: "sbd:1,qdr:m",
+        ...(countryCode ? { country: countryCode, location: built.country } : {}),
+        timeout: 45_000,
+        ignoreInvalidURLs: true,
+        scrapeOptions: { formats: ["markdown"] },
+      },
+      60_000,
+    );
 
     if (res.ok) break;
     const retryable = res.status === 429 || res.status >= 500;
@@ -283,15 +335,19 @@ async function providerSearch(
  */
 export async function fetchAdvertisementText(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "en",
+    const res = await fetchWithTimeout(
+      url,
+      {
+        redirect: "follow",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en",
+        },
       },
-    });
+      25_000,
+    );
     if (!res.ok) return null;
     const html = await res.text();
     if (!html) return null;
@@ -332,13 +388,27 @@ export async function fetchAdvertisementText(url: string): Promise<string | null
 }
 
 /** Open the actual advertisement so fields can be verified against the source. */
-export async function scrapeAdvertisement(url: string): Promise<string | null> {
+export async function scrapeAdvertisement(
+  url: string,
+  prefetchedMarkdown?: string,
+): Promise<string | null> {
+  // /search already requested markdown. Reuse a substantive prefetched page
+  // instead of opening the same advertisement a second time.
+  if (prefetchedMarkdown && prefetchedMarkdown.trim().length >= 400) {
+    return prefetchedMarkdown.trim();
+  }
+
   try {
-    const res = await firecrawlRequest("/scrape", {
-      url,
-      formats: ["markdown"],
-      onlyMainContent: true,
-    });
+    const res = await firecrawlRequest(
+      "/scrape",
+      {
+        url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+        timeout: 35_000,
+      },
+      45_000,
+    );
     if (!res.ok) return fetchAdvertisementText(url);
     const json = (await res.json()) as { markdown?: string; data?: { markdown?: string } };
     return json.markdown ?? json.data?.markdown ?? (await fetchAdvertisementText(url));
@@ -397,9 +467,9 @@ const BOT_PROTECTED_STATUSES = new Set([401, 403, 405, 429, 999]);
 export async function verifyVacancyUrl(rawUrl: string): Promise<string | null> {
   if (!isPlausibleVacancyUrl(rawUrl)) return null;
   try {
-    let res = await fetch(rawUrl, { method: "HEAD", redirect: "follow" });
+    let res = await fetchWithTimeout(rawUrl, { method: "HEAD", redirect: "follow" }, 15_000);
     if (res.status === 405 || res.status === 501 || res.status === 403) {
-      res = await fetch(rawUrl, { method: "GET", redirect: "follow" });
+      res = await fetchWithTimeout(rawUrl, { method: "GET", redirect: "follow" }, 20_000);
     }
     if (!res.ok && !BOT_PROTECTED_STATUSES.has(res.status)) return null;
     const finalUrl = res.url || rawUrl;
@@ -530,21 +600,24 @@ async function extractAndScore(
     );
   }
 
-  const res = await fetch(AI_GATEWAY, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      messages: [
-        { role: "system", content: verificationPrompt(todayIso) },
-        {
-          role: "user",
-          content: `URL: ${hit.url}\nListing title: ${hit.title ?? ""}\n\nAdvertisement content:\n${content.slice(0, 18000)}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    }),
-  });
+  const res = await fetchWithTimeout(
+    AI_GATEWAY,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          { role: "system", content: verificationPrompt(todayIso) },
+          {
+            role: "user",
+            content: `URL: ${hit.url}\nListing title: ${hit.title ?? ""}\n\nAdvertisement content:\n${content.slice(0, 18000)}`,
+          },
+        ],
+      }),
+    },
+    90_000,
+  );
 
   if (!res.ok) {
     const text = await res.text();
@@ -661,84 +734,105 @@ export async function runSearchEngine(options?: {
   const hits: ProviderHit[] = [];
   const queryFailures: string[] = [];
 
-  for (const query of queries) {
+  // Provider calls are independent. Four workers keep the run responsive while
+  // leaving headroom for the connected provider's rate limits.
+  const queryOutcomes = await mapWithConcurrency(queries, 4, async (query) => {
     try {
-      const results = await providerSearch(query, resultsPerQuery);
-      for (const hit of results) {
-        if (!hit.url || seenUrls.has(hit.url)) continue;
-        seenUrls.add(hit.url);
-        hits.push(hit);
-      }
+      return { results: await providerSearch(query, resultsPerQuery) };
     } catch (error) {
       // A single query failing (rate limit, upstream blip) must not abort the run.
-      queryFailures.push(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
       console.error("[jobSearch] query failed:", query, error);
+      return { failure: message };
+    } finally {
+      await sleep(300);
     }
-    // Pace requests so the provider's per-minute rate limit is not tripped.
-    await sleep(1_200);
+  });
+
+  for (const outcome of queryOutcomes) {
+    if ("failure" in outcome) {
+      queryFailures.push(outcome.failure);
+      continue;
+    }
+    for (const hit of outcome.results) {
+      if (!hit.url || seenUrls.has(hit.url)) continue;
+      seenUrls.add(hit.url);
+      hits.push(hit);
+    }
   }
   if (hits.length === 0 && queryFailures.length > 0) {
     throw new Error(queryFailures[0]!);
   }
 
-  const jobs: CandidateJob[] = [];
-  const byKey = new Set<string>();
-  let rejected = 0;
-  const diagnostics: CandidateDiagnostic[] = [];
-  const note = (
+  const toDiagnostic = (
     hit: ProviderHit,
     reason: RejectionReason,
     title?: string,
     detail?: string,
-  ) => {
-    diagnostics.push({
-      url: hit.url,
-      title: title ?? hit.title ?? "",
-      role_family: classifyRoleFamily(title, hit.title, hit.description, hit.url),
-      reason,
-      ...(detail ? { detail } : {}),
-    });
+  ): CandidateDiagnostic => ({
+    url: hit.url,
+    title: title ?? hit.title ?? "",
+    role_family: classifyRoleFamily(title, hit.title, hit.description, hit.url),
+    reason,
+    ...(detail ? { detail } : {}),
+  });
+
+  type HitOutcome = {
+    diagnostic?: CandidateDiagnostic;
+    job?: CandidateJob;
   };
 
-  for (const hit of hits) {
+  // Each hit performs scrape -> LLM verification -> final URL check. Six workers
+  // substantially reduce wall-clock time without changing the order of results.
+  const outcomes = await mapWithConcurrency(hits, 6, async (hit): Promise<HitOutcome> => {
     if (!isPlausibleVacancyUrl(hit.url)) {
-      rejected += 1;
-      note(hit, "not_a_vacancy_url");
-      continue;
+      return { diagnostic: toDiagnostic(hit, "not_a_vacancy_url") };
     }
     // The advertisement must actually be openable before anything is considered.
-    const content = await scrapeAdvertisement(hit.url);
+    const content = await scrapeAdvertisement(hit.url, hit.markdown);
     if (!content) {
-      rejected += 1;
-      note(hit, "page_not_openable");
-      continue;
+      return { diagnostic: toDiagnostic(hit, "page_not_openable") };
     }
     const outcome = await extractAndScore(hit, content, todayIso);
     const candidate = outcome.candidate;
     if (!candidate) {
-      rejected += 1;
-      note(hit, outcome.reason ?? "other", outcome.title, outcome.detail);
-      continue;
+      return {
+        diagnostic: toDiagnostic(hit, outcome.reason ?? "other", outcome.title, outcome.detail),
+      };
     }
     const hardFail = hardCriteriaReason(candidate);
     if (hardFail) {
-      rejected += 1;
-      note(hit, hardFail, candidate.title, "failed code-side hard criteria re-check");
-      continue;
+      return {
+        diagnostic: toDiagnostic(hit, hardFail, candidate.title, "failed code-side hard criteria re-check"),
+      };
     }
     // Final gate: the stored URL must resolve to a live page.
     const verifiedUrl = await verifyVacancyUrl(candidate.url);
     if (!verifiedUrl) {
-      rejected += 1;
-      note(hit, "url_not_verified", candidate.title);
-      continue;
+      return { diagnostic: toDiagnostic(hit, "url_not_verified", candidate.title) };
     }
     candidate.url = verifiedUrl;
-    const key = dedupeKey(candidate);
+    return {
+      job: candidate,
+      diagnostic: toDiagnostic(hit, "qualified", candidate.title),
+    };
+  });
+
+  const jobs: CandidateJob[] = [];
+  const byKey = new Set<string>();
+  const diagnostics: CandidateDiagnostic[] = [];
+  let rejected = 0;
+
+  for (const outcome of outcomes) {
+    if (outcome.diagnostic) {
+      diagnostics.push(outcome.diagnostic);
+      if (outcome.diagnostic.reason !== "qualified") rejected += 1;
+    }
+    if (!outcome.job) continue;
+    const key = dedupeKey(outcome.job);
     if (byKey.has(key)) continue;
     byKey.add(key);
-    jobs.push(candidate);
-    note(hit, "qualified", candidate.title);
+    jobs.push(outcome.job);
   }
 
   return {
@@ -748,5 +842,5 @@ export async function runSearchEngine(options?: {
     queries: queries.map((q) => q.query),
     diagnostics,
   };
-
 }
+
