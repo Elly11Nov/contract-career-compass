@@ -741,5 +741,12 @@ export async function runSearchEngine(options?: {
     note(hit, "qualified", candidate.title);
   }
 
-  return { jobs, examined: hits.length, rejected, queries, diagnostics };
+  return {
+    jobs,
+    examined: hits.length,
+    rejected,
+    queries: queries.map((q) => q.query),
+    diagnostics,
+  };
+
 }
