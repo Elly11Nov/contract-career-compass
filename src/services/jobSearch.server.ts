@@ -174,15 +174,23 @@ export function buildQueries(): BuiltQuery[] {
       ? "contract OR freelance OR interim"
       : "contract OR freelance OR interim OR permanent";
 
+  // Only target vacancies published within the MAX_AGE_DAYS window. The
+  // `after:` operator tells the search index to drop older pages before they
+  // cost us an open/extract; the code-side hard gate still double-checks the
+  // parsed publication date of every candidate.
+  const afterDate = new Date(Date.now() - MAX_AGE_DAYS * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
   const open = (title: string, country: string) => ({
-    query: `"${title}" job vacancy ${country} ${contractWords(country)}`,
+    query: `"${title}" job vacancy ${country} (${contractWords(country)}) after:${afterDate}`,
     country,
   });
   const board = (title: string, country: string): BuiltQuery | null => {
     const sites = SEARCH_SITES[country as keyof typeof SEARCH_SITES] ?? [];
     if (sites.length === 0) return null;
     const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
-    return { query: `"${title}" (${siteFilter})`, country };
+    return { query: `"${title}" (${siteFilter}) after:${afterDate}`, country };
   };
 
   // Priority vocabulary: guaranteed coverage for every country on every run,
