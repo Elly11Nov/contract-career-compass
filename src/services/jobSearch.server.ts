@@ -789,7 +789,7 @@ export async function runSearchEngine(options?: {
       return { diagnostic: toDiagnostic(hit, "not_a_vacancy_url") };
     }
     // The advertisement must actually be openable before anything is considered.
-    const content = await scrapeAdvertisement(hit.url);
+    const content = await scrapeAdvertisement(hit.url, hit.markdown);
     if (!content) {
       return { diagnostic: toDiagnostic(hit, "page_not_openable") };
     }
