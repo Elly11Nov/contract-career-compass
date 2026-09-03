@@ -6,6 +6,7 @@ export type Country =
   | "Sweden"
   | "Denmark"
   | "Finland"
+  | "Ireland"
   | "Czechia"
   | "Hungary"
   | "Poland"
@@ -132,6 +133,7 @@ export const COUNTRIES: Country[] = [
   "Sweden",
   "Denmark",
   "Finland",
+  "Ireland",
   "Czechia",
   "Hungary",
   "Poland",
