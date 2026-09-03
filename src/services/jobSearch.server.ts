@@ -156,6 +156,7 @@ const COUNTRY_CODES: Record<string, string> = {
   Sweden: "SE",
   Denmark: "DK",
   Finland: "FI",
+  Ireland: "IE",
   Czechia: "CZ",
   Hungary: "HU",
   Poland: "PL",

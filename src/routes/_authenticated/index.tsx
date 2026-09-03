@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/")({
       {
         name: "description",
         content:
-          "Daily dashboard of English-language contract, freelance and interim Technical Writer and Business Analyst vacancies across Germany, France, Switzerland, Italy, Sweden, Denmark and Finland, plus contract-only coverage of Czechia, Hungary, Poland and Romania.",
+          "Daily dashboard of English-language contract, freelance and interim Technical Writer and Business Analyst vacancies across Germany, France, Switzerland, Italy, Sweden, Denmark, Finland and Ireland, plus contract-only coverage of Czechia, Hungary, Poland and Romania.",
       },
       { property: "og:title", content: "Contract Job Finder" },
       {
@@ -151,8 +151,8 @@ function Dashboard() {
             <h1 className="text-xl font-semibold tracking-tight">Contract Job Finder</h1>
             <p className="text-surface-header-foreground/70 mt-0.5 text-sm">
               Contract, freelance and interim documentation & analysis roles — Germany, France,
-              Switzerland, Italy, Sweden, Denmark, Finland · contract-only: Czechia, Hungary,
-              Poland, Romania
+              Switzerland, Italy, Sweden, Denmark, Finland, Ireland · contract-only: Czechia,
+              Hungary, Poland, Romania
             </p>
           </div>
           <div className="flex items-center gap-3">
