@@ -73,8 +73,13 @@ export function filterJobs(jobs: Job[], filters: JobFilters, query: string): Job
   });
 }
 
+export function isPermittedContract(job: Job): boolean {
+  return !(job.contract_type === "Permanent" && CONTRACT_ONLY_SET.has(job.country));
+}
+
 export function isQualifying(job: Job): boolean {
   return (
+    isPermittedContract(job) &&
     daysSince(job.publication_date) <= 15 &&
     !job.language.local_language_required &&
     job.match_score >= 60
