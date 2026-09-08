@@ -1,4 +1,8 @@
+import { CONTRACT_ONLY_COUNTRIES } from "@/services/searchCriteria";
 import type { Job, JobFilters } from "@/types/job";
+
+const CONTRACT_ONLY_SET = new Set<Country>(CONTRACT_ONLY_COUNTRIES);
+
 
 /** Central European Time (handles CET/CEST automatically). */
 const TIME_ZONE = "Europe/Zurich";
