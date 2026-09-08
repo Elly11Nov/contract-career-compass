@@ -67,6 +67,7 @@ function Dashboard() {
   }, []);
 
   const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs"], queryFn: getJobs });
+  const activeJobs = useMemo(() => jobs.filter(isPermittedContract), [jobs]);
   const { data: history = [] } = useQuery({
     queryKey: ["search-history"],
     queryFn: getSearchHistory,
