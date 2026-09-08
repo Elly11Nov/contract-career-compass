@@ -82,7 +82,13 @@ export const SEARCH_COUNTRIES: Country[] = [
  * Countries included for contract-style work only.
  * Permanent employment in these countries is rejected.
  */
-export const CONTRACT_ONLY_COUNTRIES: Country[] = ["Czechia", "Hungary", "Poland", "Romania"];
+export const CONTRACT_ONLY_COUNTRIES: Country[] = [
+  "Germany",
+  "Czechia",
+  "Hungary",
+  "Poland",
+  "Romania",
+];
 
 /**
  * Titles that must be covered in every search run, for every country,
