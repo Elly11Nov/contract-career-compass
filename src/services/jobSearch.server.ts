@@ -564,7 +564,7 @@ REJECT (qualifies=false) a vacancy when ANY of the following is true:
 - the vacancy is permanent employment AND the country is one of ${CONTRACT_ONLY_COUNTRIES.join(", ")}
   (these countries are in scope for contract, freelance, interim and fixed-term work only)
 - the publication date is unknown or older than ${MAX_AGE_DAYS} days
-- a local language is mandatory as the primary working language, or English is not a working language.
+- English is not a working language of the role. Only include jobs where English is explicitly a working language; it is fine if additional local languages are also required.
   Never assume English simply because the company is international — require evidence in the advertisement.
 - the page is a search-results/aggregator listing page rather than a single advertisement
 
