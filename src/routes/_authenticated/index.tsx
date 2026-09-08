@@ -18,7 +18,7 @@ import {
   markVisit,
   updateJobStatus,
 } from "@/services/jobService";
-import { filterJobs, isNewSince, isQualifying } from "@/lib/job-utils";
+import { filterJobs, isNewSince, isPermifying, isPermittedContract } from "@/lib/job-utils";
 import { runJobSearch } from "@/services/jobSearchService";
 import { supabase } from "@/integrations/supabase/client";
 import type { Job, JobFilters, JobStatus } from "@/types/job";
