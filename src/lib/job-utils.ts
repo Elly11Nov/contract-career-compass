@@ -1,5 +1,5 @@
 import { CONTRACT_ONLY_COUNTRIES } from "@/services/searchCriteria";
-import type { Job, JobFilters } from "@/types/job";
+import type { Country, Job, JobFilters } from "@/types/job";
 
 const CONTRACT_ONLY_SET = new Set<Country>(CONTRACT_ONLY_COUNTRIES);
 
