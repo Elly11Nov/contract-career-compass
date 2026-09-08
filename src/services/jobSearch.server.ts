@@ -556,13 +556,13 @@ function sanitizeMissing(items: string[]): string[] {
 function buildPrompt(todayIso: string) {
   return `You verify and score job advertisements. Today is ${todayIso}.
 
-Permanent employment (unbefristet / Festanstellung / CDI / tillsvidare) IS accepted:
-classify it as contract_type "Permanent". Contract/freelance/interim work is still preferred.
+CONTRACT TYPE RULE — apply before any other judgement:
+- For contract-only countries (${CONTRACT_ONLY_COUNTRIES.join(", ")}), PERMANENT employment (unbefristet / Festanstellung / CDI / tillsvidare / indefinite) is NEVER in scope. Reject these vacancies immediately, regardless of title or match.
+- For all other countries (${SEARCH_COUNTRIES.filter((c) => !CONTRACT_ONLY_COUNTRIES.includes(c)).join(", ")}), permanent employment IS accepted and should be classified as contract_type "Permanent". Contract/freelance/interim/fixed-term work is still preferred.
 
 REJECT (qualifies=false) a vacancy when ANY of the following is true:
 - the country is not one of ${SEARCH_COUNTRIES.join(", ")}
 - the vacancy is permanent employment AND the country is one of ${CONTRACT_ONLY_COUNTRIES.join(", ")}
-  (these countries are in scope for contract, freelance, interim and fixed-term work only)
 - the publication date is unknown or older than ${MAX_AGE_DAYS} days
 - English is not a working language of the role. Only include jobs where English is explicitly a working language; it is fine if additional local languages are also required.
   Never assume English simply because the company is international — require evidence in the advertisement.

@@ -1,4 +1,8 @@
-import type { Job, JobFilters } from "@/types/job";
+import { CONTRACT_ONLY_COUNTRIES } from "@/services/searchCriteria";
+import type { Country, Job, JobFilters } from "@/types/job";
+
+const CONTRACT_ONLY_SET = new Set<Country>(CONTRACT_ONLY_COUNTRIES);
+
 
 /** Central European Time (handles CET/CEST automatically). */
 const TIME_ZONE = "Europe/Zurich";
@@ -69,8 +73,13 @@ export function filterJobs(jobs: Job[], filters: JobFilters, query: string): Job
   });
 }
 
+export function isPermittedContract(job: Job): boolean {
+  return !(job.contract_type === "Permanent" && CONTRACT_ONLY_SET.has(job.country));
+}
+
 export function isQualifying(job: Job): boolean {
   return (
+    isPermittedContract(job) &&
     daysSince(job.publication_date) <= 15 &&
     !job.language.local_language_required &&
     job.match_score >= 60
