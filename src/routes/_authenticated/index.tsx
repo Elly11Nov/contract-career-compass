@@ -105,7 +105,7 @@ function Dashboard() {
     onError: (error: Error) => toast.error("Search failed", { description: error.message }),
   });
 
-  const visible = useMemo(() => filterJobs(jobs, filters, query), [jobs, filters, query]);
+  const visible = useMemo(() => filterJobs(activeJobs, filters, query), [activeJobs, filters, query]);
   const qualifying = useMemo(() => visible.filter(isQualifying), [visible]);
   const newJobs = useMemo(
     () => visible.filter((j) => isNewSince(j, lastVisit)),
@@ -123,15 +123,15 @@ function Dashboard() {
   }, [tab, newJobs.length, qualifying.length, query]);
 
   const stats = useMemo(() => {
-    const qualifyingAll = jobs.filter(isQualifying);
+    const qualifyingAll = activeJobs.filter(isQualifying);
     return {
-      newCount: jobs.filter((j) => isNewSince(j, lastVisit)).length,
+      newCount: activeJobs.filter((j) => isNewSince(j, lastVisit)).length,
       qualifyingCount: qualifyingAll.length,
       tw: qualifyingAll.filter((j) => j.role_category === "Technical Writer").length,
       ba: qualifyingAll.filter((j) => j.role_category === "Business Analyst").length,
       countries: [...new Set(qualifyingAll.map((j) => j.country))].sort(),
     };
-  }, [jobs, lastVisit]);
+  }, [activeJobs, lastVisit]);
 
   const lastUpdated = history[0]?.run_date ?? new Date().toISOString();
 
