@@ -67,7 +67,10 @@ function Dashboard() {
   }, []);
 
   const { data: jobs = [], isLoading } = useQuery({ queryKey: ["jobs"], queryFn: getJobs });
-  const activeJobs = useMemo(() => jobs.filter(isPermittedContract), [jobs]);
+  const activeJobs = useMemo(
+    () => jobs.filter((j) => j.status !== "Closed" && isPermittedContract(j)),
+    [jobs],
+  );
   const { data: history = [] } = useQuery({
     queryKey: ["search-history"],
     queryFn: getSearchHistory,
@@ -244,7 +247,7 @@ function Dashboard() {
                 </TabsContent>
                 <TabsContent value="rejected">
                   <SavedJobs
-                    jobs={sortByScore([...byStatus("Rejected"), ...byStatus("Closed")])}
+                    jobs={sortByScore(byStatus("Rejected"))}
                     emptyMessage="Nothing rejected yet."
                     onOpen={setSelected}
                     onStatusChange={onStatusChange}
