@@ -55,6 +55,7 @@ export type RejectionReason =
   | "publication_date_out_of_range"
   | "country_out_of_scope"
   | "role_not_relevant"
+  | "paywalled_platform"
   | "already_known"
   | "url_not_verified"
   | "other";

@@ -91,6 +91,27 @@ export const CONTRACT_ONLY_COUNTRIES: Country[] = [
 ];
 
 /**
+ * Job platforms whose apply flow sits behind a paywall or premium
+ * subscription. Vacancies from these domains are rejected and hidden.
+ */
+export const PAYWALL_DOMAINS = [
+  "qualysoft.com",
+  "jobleads.com",
+  "experteer.com",
+  "theladders.com",
+  "dailyremote.com",
+];
+
+export function isPaywalledUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return PAYWALL_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Titles that must be covered in every search run, for every country,
  * before the rotating role vocabulary is used.
  */

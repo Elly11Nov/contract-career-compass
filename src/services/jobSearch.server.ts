@@ -18,6 +18,7 @@ import {
   SEARCH_CONTRACT_TYPES,
   SEARCH_COUNTRIES,
   CONTRACT_ONLY_COUNTRIES,
+  isPaywalledUrl,
   SEARCH_SITES,
   TECHNICAL_WRITING_TITLES,
 } from "./searchCriteria";
@@ -90,6 +91,7 @@ export function classifyRejectionReason(text: string): RejectionReason {
 /** Which hard criterion did a model-approved candidate fail? */
 function hardCriteriaReason(job: CandidateJob): RejectionReason | null {
   if (!job.title || !job.company || !job.url) return "extraction_failed";
+  if (isPaywalledUrl(job.url)) return "paywalled_platform";
   if (!isPlausibleVacancyUrl(job.url)) return "not_a_vacancy_url";
   if (!SEARCH_COUNTRIES.includes(job.country)) return "country_out_of_scope";
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return "permanent_role";
@@ -705,6 +707,7 @@ async function extractAndScore(
 /** Final safety net: re-check hard criteria in code, independent of the model. */
 export function passesHardCriteria(job: CandidateJob): boolean {
   if (!job.title || !job.company || !job.url) return false;
+  if (isPaywalledUrl(job.url)) return false;
   if (!isPlausibleVacancyUrl(job.url)) return false;
   if (!SEARCH_COUNTRIES.includes(job.country)) return false;
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return false;
