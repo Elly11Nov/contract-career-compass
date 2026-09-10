@@ -18,6 +18,7 @@ import {
   SEARCH_CONTRACT_TYPES,
   SEARCH_COUNTRIES,
   CONTRACT_ONLY_COUNTRIES,
+  isPaywalledUrl,
   SEARCH_SITES,
   TECHNICAL_WRITING_TITLES,
 } from "./searchCriteria";

@@ -1,4 +1,4 @@
-import { CONTRACT_ONLY_COUNTRIES } from "@/services/searchCriteria";
+import { CONTRACT_ONLY_COUNTRIES, isPaywalledUrl } from "@/services/searchCriteria";
 import type { Country, Job, JobFilters } from "@/types/job";
 
 const CONTRACT_ONLY_SET = new Set<Country>(CONTRACT_ONLY_COUNTRIES);
