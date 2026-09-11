@@ -1,415 +1,225 @@
 # Contract Career Compass
 
-Create a web application called Contract Job Finder.
-
-The purpose of the application is to provide a daily dashboard of relevant contract job vacancies.
-
-Core purpose
-
-The application should display contract, freelance, temporary, fixed-term and project-based vacancies for:
-
-Roles
-
-Technical Writer
-
-Senior Technical Writer
-
-Documentation Engineer
-
-Technical Documentation Specialist
-
-API Technical Writer
-
-Developer Documentation Writer
-
-Technical Author
-
-Documentation Specialist
-
-Business Analyst
-
-Senior Business Analyst
-
-IT Business Analyst
-
-Technical Business Analyst
-
-Requirements Engineer
-
-Requirements Analyst
-
-Technical Requirements Engineer
-
-Requirements Manager
-
-closely related roles
-
-Countries
-
-Germany
-
-France
-
-Sweden
-
-Denmark
-
-Finland
-
-Language
-
-The working language must be English.
-
-Local languages may be listed as additional/preferred languages but should not be mandatory as the primary working language.
-
-Date
-
-Only show vacancies published within the last 15 days.
-
-Contract
-
-Prioritize:
-
-Contract
-
-Freelance
-
-Fixed-term
-
-Temporary
-
-Project-based
-
-Contractor
-
-Consulting assignment
-
-Interim
-
-Dashboard
-
-Create a clean, professional dashboard that I can open every day.
-
-At the top show:
-
-Contract Job Finder
-
-Then display:
-
-Last updated
-
-Number of new jobs
-
-Number of qualifying jobs
-
-Number of Technical Writer jobs
-
-Number of Business Analyst jobs
-
-Countries represented
-
-Filters
-
-Add interactive filters for:
-
-Role
-
-Country
-
-Contract type
-
-Date posted
-
-Match score
-
-Remote / Hybrid / Onsite
-
-Allow multiple filters to be selected.
-
-Job cards
-
-Display each vacancy as a card containing:
-
-Job title
-
-Company
-
-Country / city
-
-Contract type
-
-Duration, if known
-
-Remote / Hybrid / Onsite
-
-Publication date
-
-English working language
-
-Match score out of 100
-Link to the vacancy
-
-Recommendation:
-
-Apply
-
-Maybe
-
-Don't apply
-
-Show a short explanation of why the job matches.
-
-Each card should have:
-
-View job
-
-which opens the original job advertisement.
-
-Match score
-
-Use a 0–100 match score.
-
-Display:
-
-90–100 = Excellent match
-80–89 = Strong match
-70–79 = Good match
-60–69 = Possible match
-Below 60 = Weak match
-
-Use a visually clear score indicator.
-
-Job detail view
-
-Clicking a job should open a detailed view containing:
-
-Job information
-
-Job title
-
-Company
-
-Location
-
-Contract type
-
-Duration
-
-Work model
-
-Publication date
-
-Source
-
-Original job link
-
-Match analysis
-
-Show:
-
-Strong matches
-
-Partial matches
-
-Missing requirements
-
-Transferable experience
-
-Potential red flags
-
-Language assessment
-
+**AI-ready job intelligence dashboard for contract, freelance and project-based technology roles.**
+
+Contract Career Compass is a prototype designed to turn fragmented contract-job searches into a structured daily workflow.
+
+Rather than functioning as a conventional job board, the application is designed around **job discovery, structured extraction, role classification, candidate matching and prioritisation**.
+
+## The problem
+
+Finding suitable contract roles requires repeatedly searching multiple sources, filtering irrelevant vacancies, interpreting inconsistent job titles and comparing requirements against a candidate profile.
+
+Contract Career Compass explores how this process could be supported by an AI-powered workflow.
+
+## Core workflow
+
+```text
+Job sources
+    ↓
+Job discovery
+    ↓
+Structured extraction
+    ↓
+Role classification
+    ↓
+Contract / language / location filtering
+    ↓
+Candidate-job matching
+    ↓
+Match scoring
+    ↓
 Recommendation
+    ↓
+Daily dashboard
+    ↓
+Human decision
+```
 
-Daily workflow
+The architecture separates the **job-search and analysis layer from the frontend**, allowing the prototype data source to be replaced by a real search/AI service later.
 
-The dashboard should be designed around a daily workflow.
+## AI capabilities
 
-I want to be able to open the website and immediately see:
+The planned AI workflow demonstrates five capabilities:
 
-New today
+### 1. Job discovery
 
-Jobs that appeared since my previous visit.
+Identify newly published contract, freelance, temporary, fixed-term and project-based vacancies matching defined role and geographic criteria.
 
-Last 15 days
+### 2. Role classification
 
-All currently qualifying jobs.
+Map different job titles into broader role categories such as:
 
-Saved
+* Technical Writing
+* Business Analysis
+* Requirements Engineering
+* Documentation Engineering
 
-Jobs I have marked as interesting.
+This allows related roles to be identified even when employers use different terminology.
 
-Applied
+### 3. Structured extraction
 
-Jobs I have applied for.
+Convert unstructured job advertisements into a consistent job record containing fields such as:
 
-Rejected
-
-Jobs I have decided not to pursue.
-
-Job status
-
-Allow me to change a job's status:
-
-New
-
-Interested
-
-Applied
-
-Interview
-
-Rejected
-
-Closed
-
-Persist these statuses.
-
-Search history
-
-Keep track of:
-
-Last search date
-
-Number of jobs found
-
-Number added
-
-Number removed
-
-Search criteria
-
-Design
-
-Create a modern, clean professional interface.
-
-It should feel like a personal job intelligence dashboard rather than a generic job board.
-
-Prioritize readability and information density.
-
-Use a desktop-first responsive design but make it usable on tablet and mobile.
-
-Use clear typography, cards, badges and filtering controls.
-
-Avoid unnecessary animations.
-
-Important architecture requirement
-
-Separate the UI from the job-search/search engine.
-
-For the initial prototype:
-
-Use realistic mock job data.
-
-Build the complete dashboard and interaction model.
-
-Create a clear data structure/API interface for job records.
-
-Do NOT hard-code the job cards into the UI.
-
-The application should be designed so that a real AI/job-search backend can later replace the mock data without redesigning the frontend.
-
-Create reusable components for:
-
-JobCard
-
-JobDetail
-
-FilterBar
-
-MatchScore
-
-StatusSelector
-
-DashboardStats
-
-SearchHistory
-
-SavedJobs
-
-Data model
-
-Each job should support:
-
-id
-
+```text
 title
-
 company
-
-country
-
-city
-
-role_category
-
+location
 contract_type
-
-duration
-
 work_model
-
 publication_date
-
-source
-
-url
-
 language
+requirements
+source
+url
+```
 
-match_score
+### 4. Candidate-job matching
 
-recommendation
+Compare extracted job requirements against a candidate profile and identify:
 
-strong_matches
+* Strong matches
+* Partial matches
+* Missing requirements
+* Transferable experience
+* Potential red flags
 
-partial_matches
+The prototype uses a 0–100 match score and a recommendation of:
 
-missing_requirements
+**Apply / Maybe / Don't apply**
 
-transferable_experience
+### 5. Workflow automation
 
-red_flags
+The intended daily workflow is:
 
-status
+**Discover → analyse → prioritise → review → save/apply/reject**
 
-date_added
+The human remains in control of the final decision.
 
-Future integration
+## Current prototype
 
-Design the application so it can later receive job data from an external AI/search service.
+The current version uses **realistic mock job data** to demonstrate the complete dashboard and interaction model.
 
-The frontend should not assume that mock data is permanent.
+Implemented:
 
-Include a clear placeholder/service layer such as:
+* Job dashboard
+* Job cards and detailed job views
+* Interactive filtering
+* Match scores
+* Recommendations
+* Saved jobs
+* Application status tracking
+* Search history
+* Structured job data model
+* Service layer separating data from the UI
 
+The prototype is intentionally designed so that the mock data source can later be replaced by a real API or AI-powered search service without redesigning the frontend.
+
+## Architecture
+
+The frontend communicates with a service layer rather than directly depending on hard-coded job cards.
+
+Example interface:
+
+```text
 getJobs()
 getJob(id)
 updateJobStatus(id, status)
+```
 
-so the mock data source can later be replaced with a real API.
+This separation allows future integration with:
 
-For now, focus on building a polished, functional dashboard with realistic sample data.
+* Job-search APIs
+* Web-search services
+* AI extraction/classification
+* Candidate-profile matching
+* Automated daily searches
+
+## Data model
+
+Each job is represented as structured data including:
+
+```text
+id
+title
+company
+country
+city
+role_category
+contract_type
+duration
+work_model
+publication_date
+source
+url
+language
+match_score
+recommendation
+strong_matches
+partial_matches
+missing_requirements
+transferable_experience
+red_flags
+status
+date_added
+```
+
+## Why this project
+
+The project explores the intersection of:
+
+* AI-assisted information processing
+* Knowledge and information architecture
+* Requirements analysis
+* Structured data
+* Workflow design
+* Human-in-the-loop decision making
+
+The goal is not simply to build a job board, but to explore how an AI-assisted workflow can transform **unstructured job information into actionable career intelligence**.
+
+## Technology
+
+* Lovable
+* React / TypeScript
+* Structured JSON data
+* Service-layer architecture
+* GitHub
+
+## Future architecture
+
+The next evolution would replace the mock data source with an AI/search pipeline:
+
+```text
+External job sources
+        ↓
+Search / retrieval
+        ↓
+Extraction
+        ↓
+Classification
+        ↓
+Deduplication
+        ↓
+Candidate matching
+        ↓
+Scoring & recommendations
+        ↓
+Job intelligence API
+        ↓
+Contract Career Compass UI
+```
+
+This creates a path from a frontend prototype to a **real AI-powered job intelligence system**.
+
+## Live prototype
+
+**Live app:** https://contract-hunt-daily.lovable.app
+
+Built as an AI-assisted prototype using Lovable.
+
 
 This project was built with [Lovable](https://lovable.dev).
 
 **Live app**: https://contract-hunt-daily.lovable.app
 
-## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/8c8728fe-029e-497d-8fa1-72771baf3c0f).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
