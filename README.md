@@ -11,7 +11,10 @@ Rather than functioning as a conventional job board, the application is designed
 Finding suitable contract roles requires repeatedly searching multiple sources, filtering irrelevant vacancies, interpreting inconsistent job titles and comparing requirements against a candidate profile.
 
 Contract Career Compass explores how this process could be supported by an AI-powered workflow.
-## The diagrams
+## Workflow & System Modelling
+
+The project uses a combination of workflow and system models to show how the solution works from different perspectives.
+
 [Use Case Model — actors and system capabilities](diagram/LinkedIn-Insights-Use-Case-Model.png)
 
 [Activity Diagram — user and system activities](diagram/LinkedIn-Insights-Activity-Diagram.png)
