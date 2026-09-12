@@ -14,8 +14,9 @@ Contract Career Compass explores how this process could be supported by an AI-po
 ## Workflow & System Modelling
 
 The project uses a combination of workflow and system models to show how the solution works from different perspectives.
-[AI-Assisted Workflow Design — human, AI and system responsibilities](https://github.com/Elly11Nov/AI-Requirements-Analyst/diagram)
-
+[AI-Assisted Workflow Design — human, AI and system responsibilities](https://github.com/Elly11Nov/AI-Requirements-Analyst/diagrams)
+diagrams
+/AI-assisted workflow design.png
 [Use Case Model — actors and system capabilities](diagram/LinkedIn-Insights-Use-Case-Model.png)
 
 [Activity Diagram — user and system activities](diagram/LinkedIn-Insights-Activity-Diagram.png)
