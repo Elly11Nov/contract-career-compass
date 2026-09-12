@@ -218,8 +218,3 @@ This creates a path from a frontend prototype to a **real AI-powered job intelli
 Built as an AI-assisted prototype using Lovable.
 
 
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://contract-hunt-daily.lovable.app
-
-
