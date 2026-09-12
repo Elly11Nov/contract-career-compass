@@ -11,6 +11,18 @@ Rather than functioning as a conventional job board, the application is designed
 Finding suitable contract roles requires repeatedly searching multiple sources, filtering irrelevant vacancies, interpreting inconsistent job titles and comparing requirements against a candidate profile.
 
 Contract Career Compass explores how this process could be supported by an AI-powered workflow.
+## The diagrams
+diagrams/LinkedIn-Insights-Use-Case-Model.png
+
+diagrams/LinkedIn-Insights-Activity-Diagram.png
+
+diagrams/LinkedIn-Insights-Process-Workflow.png
+
+diagrams/LinkedIn-Insights-Sequence-Diagram.png
+
+diagrams/LinkedIn-Insights-Domain-Model.png
+
+The architecture separates the job-search and analysis layer from the frontend, allowing the prototype data source to be replaced by a real search/AI service later.
 
 ## Core workflow
 
@@ -35,14 +47,4 @@ Daily dashboard
     ↓
 Human decision
 
-diagrams/LinkedIn-Insights-Use-Case-Model.png
 
-diagrams/LinkedIn-Insights-Activity-Diagram.png
-
-diagrams/LinkedIn-Insights-Process-Workflow.png
-
-diagrams/LinkedIn-Insights-Sequence-Diagram.png
-
-diagrams/LinkedIn-Insights-Domain-Model.png
-
-The architecture separates the job-search and analysis layer from the frontend, allowing the prototype data source to be replaced by a real search/AI service later.
