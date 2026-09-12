@@ -12,6 +12,8 @@ Finding suitable contract roles requires repeatedly searching multiple sources, 
 
 Contract Career Compass explores how this process could be supported by an AI-powered workflow.
 ## Workflow & System Modelling
+[AI-Assisted Workflow Design](diagram/AI-assisted-workflow-design.png) — human, AI and system responsibilities
+
 
 The project uses a combination of workflow and system models to show how the solution works from different perspectives.
 
