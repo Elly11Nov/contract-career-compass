@@ -34,3 +34,15 @@ Recommendation
 Daily dashboard
     ↓
 Human decision
+
+Use Case Model — actors and system capabilities
+
+Activity Diagram — user and system activities
+
+Process Workflow — end-to-end business process
+
+Sequence Diagram — interactions between components
+
+Domain Model — key entities, data and relationships
+
+The architecture separates the job-search and analysis layer from the frontend, allowing the prototype data source to be replaced by a real search/AI service later.
