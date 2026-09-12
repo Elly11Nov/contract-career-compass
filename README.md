@@ -35,14 +35,14 @@ Daily dashboard
     ↓
 Human decision
 
-Use Case Model — actors and system capabilities
+diagrams/LinkedIn-Insights-Use-Case-Model.png
 
-Activity Diagram — user and system activities
+diagrams/LinkedIn-Insights-Activity-Diagram.png
 
-Process Workflow — end-to-end business process
+diagrams/LinkedIn-Insights-Process-Workflow.png
 
-Sequence Diagram — interactions between components
+diagrams/LinkedIn-Insights-Sequence-Diagram.png
 
-Domain Model — key entities, data and relationships
+diagrams/LinkedIn-Insights-Domain-Model.png
 
 The architecture separates the job-search and analysis layer from the frontend, allowing the prototype data source to be replaced by a real search/AI service later.
