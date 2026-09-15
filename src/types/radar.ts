@@ -26,9 +26,12 @@ export interface RadarSignal {
 /** A relevant role family this profile could fit. */
 export type PotentialRoleCategory =
   | "Business Analyst"
+  | "Business Process Analyst"
   | "Requirements Engineer"
+  | "Functional Analyst"
   | "Technical Writer"
   | "Documentation / Knowledge"
+  | "Knowledge Engineer"
   | "Digital Transformation Analyst"
   | "AI Business / Functional Analyst"
   | "Product / Technology Analyst";

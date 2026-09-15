@@ -226,7 +226,7 @@ const exampleTargetCompanies: TargetCompany[] = [
     company: "Seine Analytics Lab (example)",
     country: "France",
     industry: "AI / data services",
-    role_categories: ["AI Business / Functional Analyst", "Knowledge Engineer" as never],
+    role_categories: ["AI Business / Functional Analyst", "Knowledge Engineer"],
     previous_relevant_hiring: ["Knowledge Engineer (2025)"],
     current_signals: ["AI transformation initiative announced"],
     radar_status: "Medium",
