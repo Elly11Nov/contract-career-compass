@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -161,6 +161,9 @@ function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="secondary">English working language · last 15 days</Badge>
+            <Button size="sm" variant="ghost" asChild>
+              <Link to="/early-radar">Early Radar</Link>
+            </Button>
             <Button
               size="sm"
               variant="secondary"
