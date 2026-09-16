@@ -94,6 +94,11 @@ function EarlyRadarPage() {
     queryKey: ["radar-companies"],
     queryFn: getTargetCompanies,
   });
+  const { data: allHistory = [] } = useQuery({
+    queryKey: ["radar-history"],
+    queryFn: getHiringHistory,
+  });
+
 
   const earlyJobs = allEarlyJobs.filter(
     (job) => sourceFilter === "All" || job.source_category === sourceFilter,
