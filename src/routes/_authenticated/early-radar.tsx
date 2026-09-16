@@ -152,8 +152,12 @@ function EarlyRadarPage() {
         return;
       }
       await refreshRadar();
+      // Show the employers just checked, so recruiter entries are not mistaken
+      // for the result of an employer scan.
+      setSourceFilter(employerCategory);
+      const checked = summary.sources_scanned ?? [];
       toast.success(
-        `Checked ${summary.sources_scanned?.length ?? 0} companies · read ${summary.examined ?? 0} vacancies · ${summary.stored ?? 0} added · ${summary.rejected ?? 0} not relevant`,
+        `${employerCategory}: checked ${checked.length ? checked.join(", ") : "no company"} · read ${summary.examined ?? 0} vacancies · ${summary.stored ?? 0} added · ${summary.rejected ?? 0} not relevant`,
       );
     } catch {
       toast.error("The employer scan could not be completed.");
