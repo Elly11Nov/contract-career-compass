@@ -1,0 +1,212 @@
+# Early Radar — Complete Swiss Employer, Recruiter, Hiring History & Business Signal Implementation
+
+## IMPORTANT — PRESERVE THE WORK JUST COMPLETED
+
+First inspect and preserve everything you have **just implemented and tested** for Early Radar and recruiter search.
+
+**Do not undo, duplicate or rebuild the recent recruiter-search work.**
+
+In particular, preserve:
+
+* the corrected location handling
+* the individual vacancy-link discovery
+* the existing recruiter/agency search logic
+* the live-test results and any fixes already applied
+
+If anything in the specification below conflicts with the implementation you have just completed, **show me the conflict before changing the existing working functionality.**
+
+---
+
+# 1. Objective
+
+We are now extending the existing **Early Radar** into a broader, evidence-based opportunity detection system for the Swiss job market.
+
+Early Radar should identify four types of useful evidence:
+
+### A. Current relevant vacancies
+
+Real vacancies currently advertised by Swiss employers or recruiters.
+
+### B. Recent hiring history
+
+Companies that have advertised or demonstrably hired people with profiles similar to mine during the previous 12 months.
+
+Time period:
+
+**15 September 2025 – 16 September 2026**
+
+Include:
+
+* permanent
+* contract
+* freelance
+* interim
+* temporary
+* fixed-term
+
+### C. Recruiter activity
+
+Swiss recruitment/staffing companies advertising relevant roles for their clients.
+
+### D. Business and transformation signals
+
+Companies showing public evidence of activity that could be relevant to my professional profile, such as:
+
+* technology transformation
+* digital transformation
+* AI programmes
+* major technology projects
+* new platforms
+* acquisitions
+* expansion
+* new teams
+* major technology investments
+
+These are **signals to monitor**, not predictions.
+
+The system must distinguish clearly between **evidence** and **inference**.
+
+---
+
+# 2. Do not redesign the existing application
+
+This is an extension of the existing application.
+
+**Do not redesign the UI.**
+
+**Do not change or break the existing Job Search functionality.**
+
+Reuse the existing:
+
+* Firecrawl integration
+* AI/relevance scoring
+* database
+* job schema
+* source handling
+* filtering
+* deduplication
+* UI components
+* existing Early Radar components
+
+Before making significant changes, inspect the current implementation and report what can be reused.
+
+---
+
+# 3. Early Radar source categories
+
+Maintain these categories:
+
+### Core Target Employers
+
+Companies with strong potential relevance to my professional profile.
+
+### Target Employers
+
+Relevant companies where suitability depends on the specific vacancy.
+
+### Watchlist Employers
+
+Companies worth monitoring because of relevant technology, transformation or previous hiring evidence, even if some current vacancies are unsuitable.
+
+### Recruiters & Staffing
+
+Recruitment/staffing companies advertising relevant Swiss roles for clients.
+
+Recruiters must be treated separately from employers.
+
+---
+
+# 4. Core Target Employers
+
+Use this initial seed list:
+
+* Swiss Re
+* Zurich Insurance
+* Julius Baer
+* Bank J. Safra Sarasin
+* KPMG Switzerland
+* Deloitte Switzerland
+* Luxoft Switzerland
+* Aon Switzerland
+* SWIFT
+* Sika
+* Sonar
+* Spitch
+* REGDATA
+* Expleo Switzerland
+* ELCA
+* AXA Switzerland
+* UBS
+* Swiss Life
+* Helvetia
+* Baloise
+* ABB Switzerland
+* Siemens Switzerland
+* Hitachi Energy Switzerland
+* Logitech Switzerland
+* CERN
+
+These are seed companies only.
+
+Do not assume every vacancy at these companies is relevant.
+
+Evaluate each vacancy individually.
+
+---
+
+# 5. Watchlist Employers
+
+Use this initial watchlist:
+
+* Fides Treasury Services
+* SCHOTT Pharma Switzerland
+* Endress+Hauser
+* Ergon Informatik
+* ti&m
+* Eraneos
+* Finnova
+* adesso Switzerland
+* Inventx
+* Avaloq
+* SBB
+* Swisscom
+
+A company should remain monitorable even if a particular vacancy is excluded because of language requirements.
+
+### Fides
+
+Fides has previously advertised roles combining Requirements Engineering and Technical Writing with English and German requirements.
+
+There is real-world information suggesting that actual hiring may sometimes be more flexible than the wording of a vacancy.
+
+**Do not present this as an official Fides policy.**
+
+Keep Fides on the watchlist and evaluate future vacancies individually.
+
+---
+
+# 6. Recruiters & Staffing
+
+Create a separate recruiter category containing:
+
+* Hays Switzerland
+* Robert Half Switzerland
+* Coopers Group AG
+* Randstad Switzerland
+* Michael Page Switzerland
+* Experis Switzerland
+* Adecco Switzerland
+* Manpower Switzerland
+* Nordwand Group
+* Finders SA
+* IT Di-Visions
+* One Agency
+* Albedis
+* IQ Plus
+* SpeciTec
+
+Verify every recruiter and its Swiss job-search/recruitment source.
+
+**Do not invent URLs.**
+
+If a recruiter does not have a usable public source that Firecrawl can access, mark
