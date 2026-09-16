@@ -41,7 +41,33 @@ export type PotentialRoleCategory =
  * ideally before it reaches LinkedIn or the major boards.
  */
 /** Where a monitored source sits: a direct employer, an agency, or a watch item. */
-export type SourceCategory = "Target Employers" | "Recruiters & Staffing" | "Watchlist";
+export type SourceCategory =
+  | "Core Target Employers"
+  | "Target Employers"
+  | "Recruiters & Staffing"
+  | "Watchlist Employers"
+  | "Watchlist";
+
+/** A relevant role a monitored company demonstrably advertised in the last 12 months. */
+export interface HiringHistoryEntry {
+  id: string;
+  company: string;
+  source_name: string;
+  source_category: SourceCategory;
+  title: string;
+  city: string | null;
+  country: Country;
+  employment_type: string;
+  language_requirement: string;
+  url: string;
+  advertised_at: string | null;
+  first_detected_at: string;
+  relevance: RadarStatus;
+  relevance_score: number;
+  relevance_reason: string;
+  matched_skills: string[];
+  is_current: boolean;
+}
 
 export interface EarlyJob {
   id: string;
