@@ -483,6 +483,35 @@ function parseJsonReply(raw: string): Record<string, unknown> | null {
 const str = (value: unknown, fallback = "") =>
   typeof value === "string" && value.trim() ? value.trim() : fallback;
 
+/** Wording that makes German only desirable, never mandatory. */
+const GERMAN_SOFT =
+  /(preferred|an advantage|advantageous|desirable|nice to have|a plus|beneficial|welcome|would be|optional|von vorteil|w(ü|u)nschenswert|erw(ü|u)nscht|ein plus)/i;
+
+/** Wording that makes German a genuine requirement. */
+const GERMAN_HARD = [
+  /(german|deutsch)[^.;\n]{0,80}\b(required|mandatory|essential|must|obligatory|necessary|fluency|fluent|proficiency|proficient|native|business level|c1|c2|b2|b1)\b/i,
+  /\b(required|requirement|must have|must be|fluent|fluency|proficient|proficiency|native|excellent|very good|verhandlungssicher)\b[^.;\n]{0,80}(german|deutsch)/i,
+  /(german|deutsch)\s*(and|und|&|\+|\/)\s*english[^.;\n]{0,60}\b(required|mandatory|fluent|fluency|essential|must)\b/i,
+  /(sehr gute|flie(ß|ss)ende|verhandlungssichere|gute)\s+deutschkenntnisse/i,
+  /deutsch(kenntnisse)?[^.;\n]{0,40}(zwingend|erforderlich|voraussetzung|notwendig|muss)/i,
+  /(german|deutsch)[- ]?(speaking|sprachig)[^.;\n]{0,40}\b(required|mandatory|must|erforderlich)\b/i,
+];
+
+/**
+ * Safety net over the AI language verdict: German must never be a requirement.
+ * Only sentences that actually make German mandatory exclude a vacancy;
+ * sentences where German is preferred/an advantage are ignored.
+ */
+export function requiresGerman(content: string): boolean {
+  const sentences = content.split(/(?<=[.;!?\n])/);
+  for (const sentence of sentences) {
+    if (!/german|deutsch/i.test(sentence)) continue;
+    if (GERMAN_SOFT.test(sentence)) continue;
+    if (GERMAN_HARD.some((re) => re.test(sentence))) return true;
+  }
+  return false;
+}
+
 async function scoreAdvertisement(
   source: RadarSourceInput,
   hit: ProviderHit,
