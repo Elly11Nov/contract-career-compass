@@ -117,9 +117,76 @@ export async function getEarlyJobs(): Promise<EarlyJob[]> {
   );
 }
 
-/** Stage 2 feature — deliberately empty until real signal detection exists. */
+/**
+ * Public business / transformation evidence about monitored companies.
+ * These are signals to monitor, never predictions that a role will be advertised.
+ */
 export async function getPotentialOpportunities(): Promise<PotentialOpportunity[]> {
-  return [];
+  const { data, error } = await supabase
+    .from("radar_signals")
+    .select("*")
+    .order("detected_at", { ascending: false });
+  if (error) throw error;
+
+  return (data ?? [])
+    .filter((row) => isRealPublicUrl(row.url))
+    .map((row) => ({
+      id: row.id,
+      company: row.company,
+      country: row.country as Country,
+      potential_roles: (row.potential_roles ?? []).flatMap((r) => toRoleCategories(r)),
+      radar_status: toStatus(row.radar_status),
+      signals: [
+        {
+          category: (row.category as PotentialOpportunity["signals"][number]["category"]) ??
+            "Technology change",
+          description: row.description,
+          source: row.evidence_source,
+          detected_at: row.published_at ?? row.detected_at,
+          url: row.url,
+        },
+      ],
+      why_relevant: row.why_relevant ?? "",
+      matched_skills: row.matched_skills ?? [],
+      detected_at: row.detected_at,
+      is_example: false,
+    }))
+    .sort(
+      (a, b) =>
+        statusRank[a.radar_status] - statusRank[b.radar_status] ||
+        b.detected_at.localeCompare(a.detected_at),
+    );
+}
+
+/** Relevant roles monitored companies demonstrably advertised, newest first. */
+export async function getHiringHistory(): Promise<HiringHistoryEntry[]> {
+  const { data, error } = await supabase
+    .from("radar_hiring_history")
+    .select("*")
+    .order("advertised_at", { ascending: false, nullsFirst: false });
+  if (error) throw error;
+
+  return (data ?? [])
+    .filter((row) => isRealPublicUrl(row.url))
+    .map((row) => ({
+      id: row.id,
+      company: row.company,
+      source_name: row.source_name,
+      source_category: toCategory(row.source_category),
+      title: row.title,
+      city: row.city,
+      country: row.country as Country,
+      employment_type: row.employment_type,
+      language_requirement: row.language_requirement,
+      url: row.url,
+      advertised_at: row.advertised_at,
+      first_detected_at: row.first_detected_at,
+      relevance: toStatus(row.relevance),
+      relevance_score: row.relevance_score,
+      relevance_reason: row.relevance_reason ?? "",
+      matched_skills: row.matched_skills ?? [],
+      is_current: row.is_current,
+    }));
 }
 
 /** Monitored sources: employers, recruitment agencies and watchlist entries. */
