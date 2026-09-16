@@ -487,8 +487,10 @@ async function scoreAdvertisement(
       role_category: str(parsed["role_category"]) || null,
       matched_skills: skills,
       verification_status: "verified",
+      is_open: isOpen,
+      closing_date: closingDate,
     },
-    reason: "qualified",
+    reason: isOpen ? "qualified" : "qualified_closed",
   };
 }
 
