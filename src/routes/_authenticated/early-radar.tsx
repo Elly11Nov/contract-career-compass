@@ -271,6 +271,7 @@ function EarlyRadarPage() {
             <TabsTrigger value="opportunities">
               🚨 Potential opportunities ({opportunities.length})
             </TabsTrigger>
+            <TabsTrigger value="history">🗂 Hiring history ({history.length})</TabsTrigger>
             <TabsTrigger value="companies">
               ⭐ Monitored sources ({filteredCompanies.length})
             </TabsTrigger>
