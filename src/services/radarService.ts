@@ -46,7 +46,8 @@ function toStatus(value: string | null): RadarStatus {
 function toCategory(value: string | null): SourceCategory {
   if (value === "Recruiter & Staffing" || value === "Recruiters & Staffing")
     return "Recruiters & Staffing";
-  if (value === "Watchlist") return "Watchlist";
+  if (value === "Watchlist" || value === "Watchlist Employers") return "Watchlist Employers";
+  if (value === "Core Target Employers") return "Core Target Employers";
   return "Target Employers";
 }
 
