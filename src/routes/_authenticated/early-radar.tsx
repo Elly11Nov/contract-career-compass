@@ -11,6 +11,7 @@ import {
   getEarlyJobs,
   getPotentialOpportunities,
   getTargetCompanies,
+  isRealPublicUrl,
 } from "@/services/radarService";
 
 export const Route = createFileRoute("/_authenticated/early-radar")({
@@ -43,10 +44,11 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Empty({ message }: { message: string }) {
+function Empty({ message, detail }: { message: string; detail?: string }) {
   return (
-    <div className="bg-card border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
-      {message}
+    <div className="bg-card border-border rounded-lg border border-dashed p-10 text-center">
+      <p className="text-sm font-medium">{message}</p>
+      {detail && <p className="text-muted-foreground mx-auto mt-2 max-w-xl text-sm">{detail}</p>}
     </div>
   );
 }
@@ -104,11 +106,12 @@ function EarlyRadarPage() {
 
       <main className="mx-auto max-w-7xl space-y-4 px-4 py-6 lg:px-8">
         <div className="bg-card border-warning/40 rounded-lg border p-4 text-sm">
-          <p className="font-medium">Phase 1 — illustrative example data</p>
+          <p className="font-medium">Real data only — monitoring not connected yet</p>
           <p className="text-muted-foreground mt-1">
-            Everything on this page is marked <strong>Example data</strong> and is separate from
-            your real job list. Signals are evidence that a relevant role <em>may</em> be needed —
-            never a statement that a company will advertise a role.
+            The earlier illustrative companies, hiring history and placeholder links have been
+            removed. This page will only ever show companies, vacancies and signals that were
+            actually found on public sources. Signals mean a relevant role <em>may</em> be
+            needed — never a statement that a company will advertise a role.
           </p>
         </div>
 
@@ -124,7 +127,10 @@ function EarlyRadarPage() {
           <div className="mt-4">
             <TabsContent value="early-jobs">
               {earlyJobs.length === 0 ? (
-                <Empty message="No early vacancies detected yet." />
+                <Empty
+                  message="No real Early Radar vacancies detected yet."
+                  detail="Career-page and applicant-system monitoring still needs to be switched on. Once it is, vacancies found directly on employer sites appear here with the real link, the date first spotted and how they match your profile."
+                />
               ) : (
                 <div className="grid gap-3">
                   {earlyJobs.map((job) => (
@@ -172,11 +178,15 @@ function EarlyRadarPage() {
                           {relativeDays(job.first_detected_at)}
                           {job.published_at && ` · company posted ${formatDate(job.published_at)}`}
                         </span>
-                        <Button size="sm" asChild>
-                          <a href={job.url} target="_blank" rel="noopener noreferrer">
-                            Open vacancy
-                          </a>
-                        </Button>
+                        {isRealPublicUrl(job.url) ? (
+                          <Button size="sm" asChild>
+                            <a href={job.url} target="_blank" rel="noopener noreferrer">
+                              Open vacancy
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">No verified link</span>
+                        )}
                       </div>
                     </Card>
                   ))}
@@ -186,7 +196,10 @@ function EarlyRadarPage() {
 
             <TabsContent value="opportunities">
               {opportunities.length === 0 ? (
-                <Empty message="No hiring signals detected yet." />
+                <Empty
+                  message="No hiring signals detected yet."
+                  detail="When public signals are found — repeated analysis or documentation hiring, transformation or AI programmes, new products or reorganisations — the company appears here as a possible upcoming role worth monitoring."
+                />
               ) : (
                 <div className="grid gap-3">
                   {opportunities.map((opp) => (
@@ -253,7 +266,10 @@ function EarlyRadarPage() {
 
             <TabsContent value="companies">
               {companies.length === 0 ? (
-                <Empty message="No target companies yet." />
+                <Empty
+                  message="No target companies yet."
+                  detail="Employers you decide to monitor will be listed here with their real careers page link, past relevant hiring and the signals currently observed."
+                />
               ) : (
                 <div className="grid gap-3">
                   {companies.map((c) => (
@@ -303,12 +319,16 @@ function EarlyRadarPage() {
                           Last checked {formatDate(c.last_checked_at)} ·{" "}
                           {relativeDays(c.last_checked_at)}
                         </span>
-                        {c.careers_url && (
+                        {isRealPublicUrl(c.careers_url) ? (
                           <Button size="sm" variant="outline" asChild>
-                            <a href={c.careers_url} target="_blank" rel="noopener noreferrer">
+                            <a href={c.careers_url!} target="_blank" rel="noopener noreferrer">
                               Careers page
                             </a>
                           </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">
+                            No verified careers page
+                          </span>
                         )}
                       </div>
                     </Card>
