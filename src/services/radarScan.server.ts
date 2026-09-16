@@ -456,6 +456,17 @@ async function scoreAdvertisement(
   const urlKey = normalizeVacancyUrl(verifiedUrl);
   const dedupeKey = `${client.toLowerCase()}|${title.toLowerCase().replace(/\s+/g, " ").trim()}`;
 
+  const closingRaw = str(parsed["closing_date"]);
+  const closingDate = closingRaw && !Number.isNaN(Date.parse(closingRaw)) ? closingRaw : null;
+  const statedStatus = str(parsed["vacancy_status"], "Unknown");
+  const closedByDate = closingDate ? Date.parse(closingDate) < Date.parse(todayIso) : false;
+  // Safety net: the page's own wording, never the publication date.
+  const closedByWording =
+    /\b(this (vacancy|position|job|role) (is|has been) (now )?(closed|filled|expired))\b|\bno longer (available|accepting applications|open)\b|\bapplications (are )?closed\b|\bvacancy (expired|closed)\b|\bposition has been filled\b/i.test(
+      content,
+    );
+  const isOpen = !(/^closed$/i.test(statedStatus) || closedByDate || closedByWording);
+
   return {
     candidate: {
       title,
