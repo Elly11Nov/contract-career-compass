@@ -1,0 +1,193 @@
+# Early Radar — Phase 1: Current Vacancies
+
+## Purpose
+
+Phase 1 focuses on finding **real, currently advertised vacancies** that match the Early Radar candidate profile.
+
+The objective is to detect relevant opportunities from company career pages and recruiters, including vacancies that may not yet be visible through the usual job-search channels.
+
+Phase 1 is deliberately focused on **current vacancies**. Historical hiring patterns and broader business signals are handled in later phases.
+
+---
+
+## 1. Target Roles
+
+Early Radar is broader than Technical Writing.
+
+Relevant role families include:
+
+### Documentation
+
+* Senior Technical Writer
+* Technical Writer
+* Documentation Specialist
+* Documentation Engineer
+* API Documentation
+* Developer Documentation
+* Knowledge/Documentation roles
+
+### Business Analysis & Requirements
+
+* Business Analyst
+* Technical Business Analyst
+* Requirements Engineer
+* Requirements Analyst
+* Functional Analyst
+* Process Analyst
+* Business Process Analyst
+
+### Transformation
+
+* Digital Transformation Analyst
+* Technology Transformation Analyst
+* Business Transformation Analyst
+* Transformation-related roles involving requirements, processes, technology or stakeholder management
+
+### Knowledge & Information
+
+* Knowledge Manager
+* Knowledge Engineer
+* Information Architect
+* Content Governance
+* Knowledge Management
+
+### AI-related roles
+
+Relevant AI roles may include positions involving:
+
+* AI business analysis
+* AI transformation
+* AI requirements
+* AI knowledge management
+* AI documentation
+* AI-enabled workflows
+
+An AI or Transformation title alone does **not** make a vacancy relevant. The actual requirements and responsibilities must be considered.
+
+---
+
+## 2. Candidate Profile
+
+Relevance is assessed against the candidate's skills and experience, including:
+
+* Technical writing
+* Technical documentation
+* API documentation
+* DITA/XML
+* Docs-as-code
+* Requirements Engineering
+* Business Analysis
+* Functional and process analysis
+* Stakeholder management
+* Agile
+* Jira
+* Confluence
+* ServiceNow
+* APIs
+* JSON
+* OpenAPI/Swagger
+* Postman
+* SDK documentation
+* Knowledge Management
+* Content Governance
+* Information Architecture
+* Single Sourcing
+* Digital Transformation
+* AI-assisted workflows
+* Regulated industries
+* SaaS
+* Enterprise technology
+
+The system should consider **transferable skills and role content**, not just exact job-title matches.
+
+---
+
+## 3. Target Geography
+
+The initial focus is Switzerland.
+
+Priority locations are:
+
+1. Basel
+2. Zurich
+3. Bern
+4. Geneva
+5. Lausanne
+6. Zug
+7. Other Swiss locations
+8. Remote Swiss opportunities
+
+---
+
+## 4. Employment Types
+
+Phase 1 includes:
+
+* Permanent
+* Contract
+* Freelance
+* Interim
+* Temporary
+* Fixed-term
+* Relevant part-time roles
+
+Contract and temporary opportunities are important because recruiter activity may expose roles that are not visible through traditional permanent-job searches.
+
+---
+
+## 5. Language Rules
+
+Preferred vacancy languages are:
+
+* English
+* English + Italian
+* English + French
+* English where German is only preferred or an advantage
+
+If a specific vacancy explicitly requires German, it should be excluded.
+
+If the language requirement cannot be established, it should be recorded as:
+
+**Unknown**
+
+The system must not assume that a vacancy is English simply because the employer is an international company.
+
+---
+
+## 6. Sources
+
+Phase 1 uses real external sources.
+
+### Employers
+
+The system searches employer career pages and individual vacancy pages.
+
+Initial employer targets include companies such as:
+
+* Swiss Re
+* Zurich Insurance
+* Julius Baer
+* Bank J. Safra Sarasin
+* KPMG Switzerland
+* Deloitte Switzerland
+* Luxoft Switzerland
+* Aon Switzerland
+* SWIFT
+* Sika
+* Sonar
+* Spitch
+* REGDATA
+* Expleo Switzerland
+* ELCA
+* AXA Switzerland
+* UBS
+* Swiss Life
+* Helvetia
+* Baloise
+* ABB Switzerland
+* Siemens Switzerland
+* Hitachi Energy Switzerland
+* Logitech Switzerland
+* CERN
+
+The employer list can evolve as Early
