@@ -13,6 +13,8 @@ export interface RecruiterScanSummary {
   rejected?: number;
   stored?: number;
   duplicates?: number;
+  /** Adverts found but already closed: kept as hiring history, not current jobs. */
+  closed_kept?: number;
 }
 
 /**
