@@ -413,9 +413,12 @@ async function scoreAdvertisement(
   if (!title) return { candidate: null, reason: "extraction_failed" };
 
   const clientRaw = str(parsed["client_company"], "Not disclosed");
-  const client = /^(not disclosed|undisclosed|unknown|n\/?a|confidential)$/i.test(clientRaw)
-    ? "Not disclosed"
-    : clientRaw;
+  const client = isRecruiterCategory(source.source_category)
+    ? /^(not disclosed|undisclosed|unknown|n\/?a|confidential)$/i.test(clientRaw)
+      ? "Not disclosed"
+      : clientRaw
+    : // An employer advertises for itself: the monitored company IS the employer.
+      source.name;
   const publishedRaw = str(parsed["source_published_at"]);
   const published = publishedRaw && !Number.isNaN(Date.parse(publishedRaw)) ? publishedRaw : null;
   const score = Math.max(0, Math.min(100, Number(parsed["relevance_score"]) || 0));
