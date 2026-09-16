@@ -108,23 +108,78 @@ function EarlyRadarPage() {
     (c) => sourceFilter === "All" || c.source_category === sourceFilter,
   );
 
+  const history = allHistory.filter(
+    (h) => sourceFilter === "All" || h.source_category === sourceFilter,
+  );
+
+  const refreshRadar = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["radar-early-jobs"] });
+    await queryClient.invalidateQueries({ queryKey: ["radar-companies"] });
+    await queryClient.invalidateQueries({ queryKey: ["radar-history"] });
+    await queryClient.invalidateQueries({ queryKey: ["radar-opportunities"] });
+  };
+
   const handleScan = async () => {
-    setScanning(true);
+    setScanning("recruiters");
     try {
       const summary = await runScan({ data: {} });
       if (!summary.ok) {
         toast.error(summary.error ?? "The recruiter scan could not be completed.");
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: ["radar-early-jobs"] });
-      await queryClient.invalidateQueries({ queryKey: ["radar-companies"] });
+      await refreshRadar();
       toast.success(
         `Checked ${summary.sources_scanned?.length ?? 0} agencies · read ${summary.examined ?? 0} vacancies · ${summary.stored ?? 0} added · ${summary.rejected ?? 0} not relevant`,
       );
     } catch {
       toast.error("The recruiter scan could not be completed.");
     } finally {
-      setScanning(false);
+      setScanning(null);
+    }
+  };
+
+  const employerCategory =
+    sourceFilter === "Watchlist Employers" || sourceFilter === "Target Employers"
+      ? sourceFilter
+      : "Core Target Employers";
+
+  const handleEmployerScan = async () => {
+    setScanning("employers");
+    try {
+      const summary = await runEmployerScan({ data: { category: employerCategory, limit: 3 } });
+      if (!summary.ok) {
+        toast.error(summary.error ?? "The employer scan could not be completed.");
+        return;
+      }
+      await refreshRadar();
+      toast.success(
+        `Checked ${summary.sources_scanned?.length ?? 0} companies · read ${summary.examined ?? 0} vacancies · ${summary.stored ?? 0} added · ${summary.rejected ?? 0} not relevant`,
+      );
+    } catch {
+      toast.error("The employer scan could not be completed.");
+    } finally {
+      setScanning(null);
+    }
+  };
+
+  const handleSignalScan = async () => {
+    setScanning("signals");
+    try {
+      const summary = await runSignalScan({
+        data: { ...(sourceFilter === "All" ? {} : { category: sourceFilter }), limit: 3 },
+      });
+      if (!summary.ok) {
+        toast.error(summary.error ?? "The signal check could not be completed.");
+        return;
+      }
+      await refreshRadar();
+      toast.success(
+        `Checked ${summary.sources_scanned?.length ?? 0} companies · read ${summary.examined ?? 0} pages · ${summary.stored ?? 0} signals added · ${summary.rejected ?? 0} without usable evidence`,
+      );
+    } catch {
+      toast.error("The signal check could not be completed.");
+    } finally {
+      setScanning(null);
     }
   };
 
