@@ -461,8 +461,18 @@ async function scoreAdvertisement(
   const statedStatus = str(parsed["vacancy_status"], "Unknown");
   const closedByDate = closingDate ? Date.parse(closingDate) < Date.parse(todayIso) : false;
   // Safety net: the page's own wording, never the publication date.
+  // Swiss sources publish in German, French and Italian as well as English.
   const closedByWording =
     /\b(this (vacancy|position|job|role) (is|has been) (now )?(closed|filled|expired))\b|\bno longer (available|accepting applications|open)\b|\bapplications (are )?closed\b|\bvacancy (expired|closed)\b|\bposition has been filled\b/i.test(
+      content,
+    ) ||
+    /(bereits geschlossen|stelle (ist|wurde) (bereits )?(geschlossen|besetzt)|inserat (ist )?(nicht mehr|abgelaufen)|nicht mehr verf(ü|ue)gbar|nicht mehr ausgeschrieben|bewerbungsfrist (ist )?abgelaufen|vakanz (ist )?geschlossen)/i.test(
+      content,
+    ) ||
+    /(cette (offre|annonce|vacance) (est|a été) (d[ée]j[àa] )?(clôtur[ée]e|ferm[ée]e|pourvue)|n'est plus disponible|offre expir[ée]e)/i.test(
+      content,
+    ) ||
+    /(questa (offerta|posizione) (è|e') (già )?(chiusa|coperta)|non (è|e') pi(ù|u) disponibile)/i.test(
       content,
     );
   const isOpen = !(/^closed$/i.test(statedStatus) || closedByDate || closedByWording);

@@ -731,10 +731,22 @@ function dedupeKey(job: CandidateJob) {
  * Returns verified, scored, de-duplicated candidate records (never persisted here).
  */
 /** Stable key used to recognise a vacancy URL that is already stored. */
+/** Query keys that never identify a specific vacancy (tracking / analytics only). */
+const TRACKING_PARAMS = /^(utm_|gclid|fbclid|mc_cid|mc_eid|_ga|trk|trackingid|src|source|campaign)/i;
+
 export function normalizeVacancyUrl(rawUrl: string): string {
   try {
     const parsed = new URL(rawUrl);
-    return `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname.replace(/\/$/, "")}`.toLowerCase();
+    const base = `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname.replace(/\/$/, "")}`;
+    // Many career sites identify the vacancy in the query string
+    // (e.g. detail.php?refCode=RU0R87). Dropping it would merge every
+    // vacancy on that site into a single key.
+    const params = [...parsed.searchParams.entries()]
+      .filter(([key, value]) => value !== "" && !TRACKING_PARAMS.test(key))
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`);
+    const suffix = params.length ? `?${params.join("&")}` : "";
+    return `${base}${suffix}`.toLowerCase();
   } catch {
     return rawUrl.toLowerCase();
   }
