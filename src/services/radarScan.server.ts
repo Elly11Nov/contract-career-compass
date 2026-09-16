@@ -323,6 +323,17 @@ relevance_reason: one or two sentences explaining WHY, referring to actual adver
 source_published_at: ISO date stated on the page, or "" when the page states none.
 city: the Swiss location, or "Switzerland" when nationwide/remote.
 
+VACANCY STATUS RULES (report, do not reject):
+- vacancy_status "Closed" when the page states the vacancy is closed, filled, expired, no longer
+  available, no longer accepting applications, or shows a closing/expiry date already in the past
+  relative to ${todayIso}.
+- vacancy_status "Open" only when the page still presents the role as open and applicable, e.g. it
+  shows an apply option and no closing statement.
+- vacancy_status "Unknown" when the page gives no usable indication either way.
+- Never infer "Closed" from an old publication date alone; only the page's own wording or a stated
+  past closing date counts.
+- closing_date: ISO date of the stated application deadline/closing date, or "" when none is stated.
+
 Reply with JSON only, matching exactly:
 ${RADAR_SCHEMA}`;
 }
