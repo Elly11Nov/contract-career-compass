@@ -222,9 +222,9 @@ function EarlyRadarPage() {
           <p className="font-medium">Real data only</p>
           <p className="text-muted-foreground mt-1">
             Only vacancies that were actually opened and verified on a public source appear here.
-            Recruitment agencies are shown as the <em>source</em>, never as the employer. Potential
-            opportunities stay empty until real hiring-signal detection is added — nothing here
-            claims that a company will advertise a role.
+            Recruitment agencies are shown as the <em>source</em>, never as the employer. Business
+            signals are public evidence worth monitoring — nothing here claims that a company will
+            advertise a role.
           </p>
         </div>
 
