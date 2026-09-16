@@ -80,6 +80,10 @@ export interface RadarCandidate {
   role_category: string | null;
   matched_skills: string[];
   verification_status: string;
+  /** True only when the source still presents the vacancy as open/active. */
+  is_open: boolean;
+  /** Closing/expiry date stated on the page, when there is one. */
+  closing_date: string | null;
 }
 
 export interface RadarScanDiagnostic {
@@ -265,6 +269,8 @@ const RADAR_SCHEMA = `{
   "employment_type": "Contract" | "Permanent" | "Temporary" | "Fixed-term" | "Interim" | "Unknown",
   "language_requirement": "English" | "English + French" | "English + Italian" | "English (German an advantage)" | "German required" | "Unknown",
   "source_published_at": string,
+  "vacancy_status": "Open" | "Closed" | "Unknown",
+  "closing_date": string,
   "relevance": "High" | "Medium" | "Low",
   "relevance_score": number,
   "relevance_reason": string,
@@ -288,7 +294,7 @@ function radarPrompt(recruiter: string, todayIso: string, isRecruiter = true) {
   return `You verify vacancies advertised ${isRecruiter ? `by the Swiss recruitment agency "${recruiter}"` : `on the careers site of the Swiss employer "${recruiter}"`}. Today is ${todayIso}.
 
 REJECT (qualifies=false) when ANY of the following is true:
-- the page is a listing/search page, an expired vacancy, or not a single vacancy advertisement
+- the page is a listing/search page or not a single vacancy advertisement
 - the location is not Switzerland
 - German is explicitly required and genuinely necessary for the role
 - the actual responsibilities and required skills do not substantively overlap the candidate profile below.
@@ -316,6 +322,17 @@ relevance_score 0-100 on substantive overlap. relevance: "High" >=80, "Medium" 6
 relevance_reason: one or two sentences explaining WHY, referring to actual advertisement content.
 source_published_at: ISO date stated on the page, or "" when the page states none.
 city: the Swiss location, or "Switzerland" when nationwide/remote.
+
+VACANCY STATUS RULES (report, do not reject):
+- vacancy_status "Closed" when the page states the vacancy is closed, filled, expired, no longer
+  available, no longer accepting applications, or shows a closing/expiry date already in the past
+  relative to ${todayIso}.
+- vacancy_status "Open" only when the page still presents the role as open and applicable, e.g. it
+  shows an apply option and no closing statement.
+- vacancy_status "Unknown" when the page gives no usable indication either way.
+- Never infer "Closed" from an old publication date alone; only the page's own wording or a stated
+  past closing date counts.
+- closing_date: ISO date of the stated application deadline/closing date, or "" when none is stated.
 
 Reply with JSON only, matching exactly:
 ${RADAR_SCHEMA}`;
@@ -439,6 +456,17 @@ async function scoreAdvertisement(
   const urlKey = normalizeVacancyUrl(verifiedUrl);
   const dedupeKey = `${client.toLowerCase()}|${title.toLowerCase().replace(/\s+/g, " ").trim()}`;
 
+  const closingRaw = str(parsed["closing_date"]);
+  const closingDate = closingRaw && !Number.isNaN(Date.parse(closingRaw)) ? closingRaw : null;
+  const statedStatus = str(parsed["vacancy_status"], "Unknown");
+  const closedByDate = closingDate ? Date.parse(closingDate) < Date.parse(todayIso) : false;
+  // Safety net: the page's own wording, never the publication date.
+  const closedByWording =
+    /\b(this (vacancy|position|job|role) (is|has been) (now )?(closed|filled|expired))\b|\bno longer (available|accepting applications|open)\b|\bapplications (are )?closed\b|\bvacancy (expired|closed)\b|\bposition has been filled\b/i.test(
+      content,
+    );
+  const isOpen = !(/^closed$/i.test(statedStatus) || closedByDate || closedByWording);
+
   return {
     candidate: {
       title,
@@ -459,8 +487,10 @@ async function scoreAdvertisement(
       role_category: str(parsed["role_category"]) || null,
       matched_skills: skills,
       verification_status: "verified",
+      is_open: isOpen,
+      closing_date: closingDate,
     },
-    reason: "qualified",
+    reason: isOpen ? "qualified" : "qualified_closed",
   };
 }
 
