@@ -318,6 +318,20 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
           selected.map((s) => s.name),
         );
 
+      // Record which scan type ran, over which companies, so employer runs are
+      // distinguishable from recruiter runs in the history.
+      await supabase.from("search_runs").insert({
+        search_criteria: {
+          scan_type: "early_radar_employers",
+          source_category: category,
+          companies: selected.map((s) => s.name),
+        },
+        jobs_found: result.examined,
+        jobs_added: stored,
+        jobs_removed: closedKept,
+      });
+
+
       return {
         ok: true,
         sources_scanned: result.sources_scanned,
