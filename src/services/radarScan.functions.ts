@@ -316,6 +316,7 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
         rejected: result.rejected,
         stored,
         duplicates,
+        closed_kept: closedKept,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Employer scan failed.";
