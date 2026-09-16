@@ -304,7 +304,10 @@ async function providerSearch(
         ...(countryCode ? { country: countryCode, location: built.country } : {}),
         timeout: 45_000,
         ignoreInvalidURLs: true,
-        scrapeOptions: { formats: ["markdown"] },
+        // DISCOVERY ONLY — deliberately no scrapeOptions here. Requesting
+        // markdown made the provider read every returned page (including
+        // multi-hundred-page annual report PDFs) before we had any chance to
+        // screen it. Pages are read later, only for plausible candidates.
       },
       60_000,
     );
