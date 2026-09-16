@@ -77,8 +77,10 @@ function EarlyRadarPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const runScan = useServerFn(scanRecruiterSources);
+  const runEmployerScan = useServerFn(scanEmployerSources);
+  const runSignalScan = useServerFn(scanBusinessSignals);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("All");
-  const [scanning, setScanning] = useState(false);
+  const [scanning, setScanning] = useState<null | "recruiters" | "employers" | "signals">(null);
 
   const { data: allEarlyJobs = [] } = useQuery({
     queryKey: ["radar-early-jobs"],
