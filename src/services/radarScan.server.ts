@@ -269,6 +269,8 @@ const RADAR_SCHEMA = `{
   "employment_type": "Contract" | "Permanent" | "Temporary" | "Fixed-term" | "Interim" | "Unknown",
   "language_requirement": "English" | "English + French" | "English + Italian" | "English (German an advantage)" | "German required" | "Unknown",
   "source_published_at": string,
+  "vacancy_status": "Open" | "Closed" | "Unknown",
+  "closing_date": string,
   "relevance": "High" | "Medium" | "Low",
   "relevance_score": number,
   "relevance_reason": string,
