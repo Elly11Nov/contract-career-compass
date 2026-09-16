@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Country } from "@/types/job";
 import type {
   EarlyJob,
+  HiringHistoryEntry,
   PotentialOpportunity,
   PotentialRoleCategory,
   RadarStatus,
