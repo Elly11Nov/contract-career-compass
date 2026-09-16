@@ -1,0 +1,459 @@
+# Early Radar — Phase 2: Hiring History & Patterns
+
+## Purpose
+
+Phase 2 extends Early Radar beyond currently advertised vacancies.
+
+Its purpose is to identify **evidence of relevant hiring activity over the previous 12 months** and use that evidence to identify recurring hiring patterns.
+
+Phase 2 does not predict that a company will hire in the future.
+
+Instead, it answers:
+
+> **"What relevant roles has this company or recruiter been hiring for, and what patterns can we observe?"**
+
+---
+
+## 1. Historical Period
+
+The initial historical period is:
+
+**15 September 2025 – 16 September 2026**
+
+The period should be configurable so that it can be extended or changed in the future.
+
+Each historical finding should retain its source and date information where available.
+
+---
+
+## 2. What Phase 2 Looks For
+
+Phase 2 looks for evidence such as:
+
+* Relevant vacancies advertised during the previous 12 months
+* Multiple vacancies in the same or related role families
+* Repeated hiring by the same employer
+* Hiring across different related disciplines
+* Permanent hiring
+* Contract or interim hiring
+* Recruiter activity for relevant roles
+* Recurring Technical Writing or Documentation positions
+* Business Analyst or Requirements Engineer positions
+* Transformation-related roles
+* Knowledge Management or Knowledge Engineering roles
+* AI-related roles where they overlap with the candidate profile
+
+The purpose is to understand **actual hiring behaviour**, rather than relying only on today's vacancies.
+
+---
+
+## 3. Relevant Role Families
+
+Phase 2 uses the same broad role profile established in Phase 1.
+
+### Documentation
+
+Examples include:
+
+* Technical Writer
+* Senior Technical Writer
+* Documentation Specialist
+* Documentation Engineer
+* API Documentation
+* Developer Documentation
+
+### Business Analysis & Requirements
+
+Examples include:
+
+* Business Analyst
+* Technical Business Analyst
+* Requirements Engineer
+* Requirements Analyst
+* Functional Analyst
+* Process Analyst
+
+### Transformation
+
+Examples include:
+
+* Digital Transformation Analyst
+* Technology Transformation Analyst
+* Business Transformation Analyst
+* Transformation roles involving technology, requirements, processes or stakeholder management
+
+### Knowledge & Information
+
+Examples include:
+
+* Knowledge Manager
+* Knowledge Engineer
+* Information Architect
+* Content Governance
+* Knowledge Management
+
+### AI
+
+Relevant AI-related roles may include:
+
+* AI Business Analyst
+* AI Transformation
+* AI Requirements
+* AI Knowledge Management
+* AI Documentation
+* AI-enabled workflow roles
+
+As in Phase 1, the actual role content matters more than the job title.
+
+---
+
+## 4. Sources
+
+Phase 2 should use real historical evidence wherever it can be verified.
+
+Potential sources include:
+
+* Employer career pages
+* Archived or indexed vacancy pages
+* Recruiter vacancy pages
+* Company announcements
+* Company newsrooms
+* Press releases
+* Annual reports
+* Other reputable sources containing evidence of hiring activity
+
+The source should be retained with the finding.
+
+If historical information cannot be verified, it should not be presented as fact.
+
+---
+
+## 5. Vacancy Advertised vs. Person Hired
+
+A critical distinction in Phase 2 is between a **vacancy** and a **confirmed hire**.
+
+The system should distinguish:
+
+### Vacancy advertised
+
+There is evidence that the company advertised the role.
+
+### Hiring outcome confirmed
+
+There is reliable evidence that someone was hired.
+
+### Hiring outcome unknown
+
+The vacancy is known, but the outcome cannot be established.
+
+For example:
+
+```text id="x6e4g2"
+Vacancy advertised
+        ↓
+Was someone hired?
+        ↓
+ ┌───────────────┐
+ │               │
+Yes             Unknown
+ │               │
+Confirmed        Unknown
+hire             outcome
+```
+
+An advertised vacancy must **never** automatically be recorded as a confirmed hire.
+
+---
+
+## 6. Historical Vacancy Records
+
+Where possible, historical records should retain:
+
+* Employer
+* Recruiter
+* Client, if disclosed
+* Job title
+* Role family
+* Location
+* Employment type
+* Language
+* Source URL
+* Publication date
+* Detection date
+* Relevance information
+* Hiring outcome
+* Evidence supporting the outcome
+
+Historical records should remain distinguishable from currently active vacancies.
+
+---
+
+## 7. Recruiter Activity
+
+Recruiter activity is analysed separately from direct employer hiring.
+
+The relationship remains:
+
+```text id="1v5uw5"
+Recruiter
+    ↓
+Vacancy
+    ↓
+Client / Employer
+```
+
+If the client is disclosed, the relationship can be recorded.
+
+If the client is not disclosed, the client remains:
+
+**Undisclosed**
+
+The system must not infer the client from the job description.
+
+Phase 2 can therefore identify patterns such as:
+
+> A recruiter repeatedly advertised Requirements Engineer roles in Switzerland.
+
+It should not turn an undisclosed recruiter vacancy into an assumed employer.
+
+---
+
+## 8. Hiring Patterns
+
+Once sufficient historical data exists, Early Radar can identify patterns such as:
+
+### Repeated role family
+
+A company advertised several Technical Writing roles during the historical period.
+
+### Related role families
+
+A company hired across Documentation, Business Analysis and Requirements Engineering.
+
+### Contract activity
+
+A company repeatedly used contract or interim roles for relevant work.
+
+### Recruiter dependency
+
+A company appears repeatedly in disclosed recruiter vacancies.
+
+### Changing role profile
+
+The type of relevant roles advertised by a company changed over time.
+
+For example:
+
+```text id="vhtg4e"
+2025
+Technical Writer
+      ↓
+2026
+Documentation Engineer
+      ↓
+2026
+Requirements / Business Analyst
+```
+
+Such patterns can be useful context when evaluating a company.
+
+---
+
+## 9. Evidence vs. Prediction
+
+Historical evidence should not be presented as a prediction.
+
+For example:
+
+**Evidence**
+
+> Company X advertised three relevant documentation roles between October 2025 and June 2026.
+
+**Interpretation**
+
+> This indicates repeated hiring activity in documentation.
+
+**Not acceptable**
+
+> Company X will probably hire another Technical Writer soon.
+
+The first two statements are based on observed evidence.
+
+The third is a prediction and should not be generated as a factual conclusion.
+
+---
+
+## 10. Company Hiring Profile
+
+Phase 2 can build a historical profile for each monitored company.
+
+A profile may contain:
+
+```text id="j3q2dc"
+Company
+│
+├── Current vacancies
+│
+├── Historical vacancies
+│
+├── Role families
+│
+├── Permanent hiring
+│
+├── Contract hiring
+│
+├── Recruiter activity
+│
+└── Observed hiring patterns
+```
+
+This profile should allow the user to understand **what the company has actually been doing**.
+
+---
+
+## 11. Hiring Pattern Examples
+
+Useful observations might include:
+
+* "5 relevant vacancies detected during the period."
+* "3 were related to Business Analysis."
+* "2 were contract positions."
+* "Vacancies were detected in Zurich and Basel."
+* "Recruiter activity was identified for 2 vacancies."
+* "Hiring activity occurred in several months rather than being concentrated in one period."
+
+The system should present the underlying evidence so that the user can understand where these observations came from.
+
+---
+
+## 12. No Opaque Score
+
+Phase 2 should not create an unexplained company score such as:
+
+> Hiring potential: 87/100
+
+Instead, the system should show the underlying evidence.
+
+For example:
+
+```text id="i4br9a"
+Hiring activity
+───────────────
+8 relevant vacancies
+
+Documentation       3
+Business Analysis   2
+Requirements        2
+Transformation      1
+
+Permanent           5
+Contract            3
+
+Recruiter sourced   2
+Direct employer     6
+```
+
+This makes the radar transparent and allows the user to interpret the information herself.
+
+---
+
+## 13. Relationship with Phase 1
+
+Phase 2 uses information collected through Phase 1 where appropriate.
+
+```text id="4m48by"
+PHASE 1
+Current vacancies
+       ↓
+Historical vacancy data
+       ↓
+PHASE 2
+Hiring history
+       ↓
+Hiring patterns
+```
+
+The existing vacancy discovery, verification, relevance analysis and deduplication mechanisms should be reused wherever possible.
+
+Early Radar should not create unnecessary duplicate systems for the same vacancy data.
+
+---
+
+## 14. Data Requirements
+
+Historical records should support dates such as:
+
+* `source_published_at`
+* `first_detected_at`
+
+Where available, additional historical dates may be recorded.
+
+A future field such as:
+
+* `linkedin_first_seen_at`
+
+may be used to compare when a vacancy appeared in Early Radar with when it became visible on LinkedIn.
+
+LinkedIn comparison is not a required part of Phase 2 unless the necessary data can be obtained reliably.
+
+---
+
+## 15. Phase 2 Output
+
+The Early Radar interface should allow the user to move from a company to its historical evidence.
+
+For example:
+
+```text id="5p7a0v"
+Company
+   │
+   ├── Current Jobs
+   │
+   ├── Hiring History
+   │
+   └── Hiring Patterns
+```
+
+The user should be able to see:
+
+* Relevant historical vacancies
+* Dates
+* Role families
+* Employment types
+* Recruiter involvement
+* Confirmed vs unknown hiring outcomes
+* Observed patterns
+* Source evidence
+
+---
+
+## 16. Phase 2 Boundary
+
+Phase 2 answers:
+
+> **"What has this company or recruiter actually been hiring for?"**
+
+It does not yet attempt to determine:
+
+> "What business changes might cause them to need someone like me?"
+
+That belongs to the next stage of Early Radar:
+
+**Phase 3 — Business, Technology and Transformation Signals.**
+
+---
+
+## Phase 2 Success Criteria
+
+Phase 2 is successful when Early Radar can:
+
+1. Collect relevant historical vacancy evidence.
+2. Cover the defined 12-month period.
+3. Distinguish historical vacancies from current vacancies.
+4. Distinguish advertised vacancies from confirmed hires.
+5. Handle recruiter/client relationships correctly.
+6. Identify repeated relevant hiring.
+7. Identify contract and permanent hiring patterns.
+8. Preserve source evidence.
+9. Avoid duplicate records.
+10. Present patterns transparently without turning them into predictions.
