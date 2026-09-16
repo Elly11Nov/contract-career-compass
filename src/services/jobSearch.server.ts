@@ -304,7 +304,10 @@ async function providerSearch(
         ...(countryCode ? { country: countryCode, location: built.country } : {}),
         timeout: 45_000,
         ignoreInvalidURLs: true,
-        scrapeOptions: { formats: ["markdown"] },
+        // DISCOVERY ONLY — deliberately no scrapeOptions here. Requesting
+        // markdown made the provider read every returned page (including
+        // multi-hundred-page annual report PDFs) before we had any chance to
+        // screen it. Pages are read later, only for plausible candidates.
       },
       60_000,
     );
@@ -398,15 +401,46 @@ export async function fetchAdvertisementText(url: string): Promise<string | null
   }
 }
 
+/**
+ * Sentinel returned instead of paying for a document that is far too large to
+ * be a single advertisement. The URL is never silently discarded: the caller
+ * records a diagnostic so it can be inspected manually later.
+ */
+export const DOCUMENT_TOO_LARGE = "__document_too_large__";
+
+/** Hard byte ceiling for one advertisement read (a job ad is never this big). */
+const MAX_DOCUMENT_BYTES = 2_000_000;
+
+/**
+ * Free HEAD probe: refuse obviously oversized documents (annual/ESG reports,
+ * brochures) BEFORE any paid read. Unknown size is allowed through — the guard
+ * must never reject a vacancy just because a server omits content-length.
+ */
+async function isOversizedDocument(url: string): Promise<boolean> {
+  try {
+    const res = await fetchWithTimeout(url, { method: "HEAD", redirect: "follow" }, 12_000);
+    const length = Number(res.headers.get("content-length"));
+    if (!Number.isFinite(length) || length <= 0) return false;
+    return length > MAX_DOCUMENT_BYTES;
+  } catch {
+    return false;
+  }
+}
+
 /** Open the actual advertisement so fields can be verified against the source. */
 export async function scrapeAdvertisement(
   url: string,
   prefetchedMarkdown?: string,
 ): Promise<string | null> {
-  // /search already requested markdown. Reuse a substantive prefetched page
-  // instead of opening the same advertisement a second time.
+  // Reuse substantive content that was already obtained for this URL instead of
+  // opening the same advertisement a second time.
   if (prefetchedMarkdown && prefetchedMarkdown.trim().length >= 400) {
     return prefetchedMarkdown.trim();
+  }
+
+  if (await isOversizedDocument(url)) {
+    console.warn(`[jobSearch] skipped oversized document (not read, preserved): ${url}`);
+    return DOCUMENT_TOO_LARGE;
   }
 
   try {
@@ -417,6 +451,10 @@ export async function scrapeAdvertisement(
         formats: ["markdown"],
         onlyMainContent: true,
         timeout: 35_000,
+        // Reuse a recent provider-cached copy when one exists (24h). Vacancy
+        // pages do not change materially within a day and this avoids paying
+        // twice for the same advertisement across runs.
+        maxAge: 86_400_000,
       },
       45_000,
     );
@@ -427,6 +465,67 @@ export async function scrapeAdvertisement(
     return fetchAdvertisementText(url);
   }
 }
+
+/**
+ * FREE preliminary screening on discovery metadata only (URL + title +
+ * description). This is deliberately a small denylist of clearly non-vacancy
+ * material — never a role-title allowlist — so unusual job titles, unknown
+ * paths and ambiguous documents remain eligible for paid reading.
+ */
+const NON_VACANCY_URL_PATTERNS = [
+  /\/(news|newsroom|press|press-releases?|pressemitteilung|medien|media|blog|blogs|stories|story|insights?|events?|webinars?)(\/|$)/i,
+  /\/(investors?|investor-relations|ir|financials?|annual-?report|interim-?report|quarterly|results|shareholders?)(\/|$)/i,
+  /\/(newsletter|subscribe|imprint|impressum|legal|privacy|terms|cookie)(\/|$)/i,
+  /\/(about|about-us|company|contact|kontakt|team|leadership|management|locations?)(\/|$)/i,
+  /annual[-_ ]?report|jahresbericht|geschaftsbericht|rapport[-_ ]?annuel|sustainability[-_ ]?report|esg[-_ ]?report|factsheet|brochure|whitepaper|presentation/i,
+];
+
+/** Careers/overview landing pages: real vacancies live one level deeper. */
+const CAREERS_LANDING_PATTERNS = [
+  /\/(careers?|karriere|carrieres?|jobs|stellen|vacancies|offres|working-at-us|life-at)\/?$/i,
+  /\/(careers?|karriere|jobs|stellen)\/(overview|why-us|culture|benefits|students?|graduates?|internships?|stories|blog)(\/|$)/i,
+];
+
+const NON_VACANCY_TEXT_PATTERNS = [
+  /annual report|interim report|quarterly report|half[- ]year report|financial statements/i,
+  /jahresbericht|geschäftsbericht|rapport annuel|relazione annuale/i,
+  /press release|pressemitteilung|communiqué de presse|newsletter|media kit/i,
+  /sustainability report|esg report|investor presentation|whitepaper/i,
+];
+
+export type ScreenResult = { keep: true } | { keep: false; detail: string };
+
+export function screenHit(hit: {
+  url: string;
+  title?: string;
+  description?: string;
+}): ScreenResult {
+  let parsed: URL;
+  try {
+    parsed = new URL(hit.url);
+  } catch {
+    return { keep: false, detail: "unparseable url" };
+  }
+  const path = `${parsed.pathname}${parsed.search}`;
+
+  for (const re of NON_VACANCY_URL_PATTERNS) {
+    if (re.test(path)) return { keep: false, detail: `non-vacancy url pattern: ${re.source}` };
+  }
+  for (const re of CAREERS_LANDING_PATTERNS) {
+    if (re.test(parsed.pathname)) return { keep: false, detail: "careers landing page" };
+  }
+
+  // PDFs and other documents are NOT rejected as a class — a genuine job
+  // description is often a PDF. They are only rejected when the URL, title or
+  // description clearly names a report/newsletter/presentation.
+  const text = `${hit.title ?? ""} ${hit.description ?? ""}`;
+  for (const re of NON_VACANCY_TEXT_PATTERNS) {
+    if (re.test(text)) return { keep: false, detail: `non-vacancy document title: ${re.source}` };
+  }
+
+  return { keep: true };
+}
+
 
 const PLACEHOLDER_HOSTS = [
   "example.com",
@@ -790,8 +889,12 @@ export async function runSearchEngine(options?: {
       continue;
     }
     for (const hit of outcome.results) {
-      if (!hit.url || seenUrls.has(hit.url)) continue;
-      seenUrls.add(hit.url);
+      // EARLY DEDUPLICATION — normalised, so the same advertisement discovered
+      // by several queries (or with tracking params) is only ever read once.
+      if (!hit.url) continue;
+      const key = normalizeVacancyUrl(hit.url);
+      if (seenUrls.has(key)) continue;
+      seenUrls.add(key);
       hits.push(hit);
     }
   }
@@ -822,16 +925,40 @@ export async function runSearchEngine(options?: {
   // Vacancies already stored are skipped before any page fetch or AI call:
   // re-analysing them costs credits and can never produce a new job.
   const knownUrls = new Set((options?.knownUrls ?? []).map(normalizeVacancyUrl));
+  // In-run guard: one paid read per normalised URL, whatever happens upstream.
+  const paidReads = new Set<string>();
 
   const outcomes = await mapWithConcurrency(hits, 6, async (hit): Promise<HitOutcome> => {
-    if (knownUrls.has(normalizeVacancyUrl(hit.url))) {
+    const urlKey = normalizeVacancyUrl(hit.url);
+    if (knownUrls.has(urlKey)) {
       return { diagnostic: toDiagnostic(hit, "already_known") };
     }
     if (!isPlausibleVacancyUrl(hit.url)) {
       return { diagnostic: toDiagnostic(hit, "not_a_vacancy_url") };
     }
+    // FREE screening on discovery metadata only — no credits spent yet.
+    const screened = screenHit(hit);
+    if (!screened.keep) {
+      return { diagnostic: toDiagnostic(hit, "not_a_vacancy_url", undefined, screened.detail) };
+    }
+    if (paidReads.has(urlKey)) {
+      return { diagnostic: toDiagnostic(hit, "already_known", undefined, "duplicate within run") };
+    }
+    paidReads.add(urlKey);
     // The advertisement must actually be openable before anything is considered.
     const content = await scrapeAdvertisement(hit.url, hit.markdown);
+    if (content === DOCUMENT_TOO_LARGE) {
+      // Not a permanent rejection: the URL is preserved in diagnostics so it can
+      // be inspected manually or handled by a future dedicated path.
+      return {
+        diagnostic: toDiagnostic(
+          hit,
+          "other",
+          undefined,
+          "document too large for automatic processing — not read, URL preserved for manual inspection",
+        ),
+      };
+    }
     if (!content) {
       return { diagnostic: toDiagnostic(hit, "page_not_openable") };
     }
