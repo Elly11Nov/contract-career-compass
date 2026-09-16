@@ -156,6 +156,18 @@ export const scanRecruiterSources = createServerFn({ method: "POST" })
           selected.map((s) => s.name),
         );
 
+      await supabase.from("search_runs").insert({
+        search_criteria: {
+          scan_type: "early_radar_recruiters",
+          source_category: "Recruiters & Staffing",
+          companies: selected.map((s) => s.name),
+        },
+        jobs_found: result.examined,
+        jobs_added: stored,
+        jobs_removed: closedKept,
+      });
+
+
       console.log("[radarScan] diagnostics:", JSON.stringify(result.diagnostics).slice(0, 4_000));
 
       return {
@@ -208,10 +220,15 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
     try {
       let sourceQuery = supabase
         .from("radar_sources")
-        .select("id, name, source_category, site_url, jobs_url")
+        .select("id, name, source_category, site_url, jobs_url, last_checked_at")
         .eq("source_category", category)
         .eq("enabled", true)
-        .in("verification_status", ["verified", "site_only"]);
+        .in("verification_status", ["verified", "site_only"])
+        // Rotate: companies never checked (or checked longest ago) come first,
+        // so repeated scans move through the employer list instead of
+        // re-reading the same three companies every time.
+        .order("last_checked_at", { ascending: true, nullsFirst: true })
+        .order("name", { ascending: true });
       if (data.sourceNames?.length) sourceQuery = sourceQuery.in("name", data.sourceNames);
 
       const { data: sources, error: sourceError } = await sourceQuery;
@@ -219,7 +236,13 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
       if (!sources?.length) {
         return { ok: false, error: `No monitored sources available in "${category}".` };
       }
-      const selected = sources.slice(0, data.limit ?? 3);
+      // Spend the small per-scan budget on companies with a real job page first.
+      const ordered = [
+        ...sources.filter((s) => s.jobs_url),
+        ...sources.filter((s) => !s.jobs_url),
+      ];
+      const selected = ordered.slice(0, data.limit ?? 3);
+
 
       const { data: existing } = await supabase.from("radar_vacancies").select("url_key");
       const knownUrlKeys = (existing ?? []).map((r) => r.url_key);
@@ -306,6 +329,20 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
           "name",
           selected.map((s) => s.name),
         );
+
+      // Record which scan type ran, over which companies, so employer runs are
+      // distinguishable from recruiter runs in the history.
+      await supabase.from("search_runs").insert({
+        search_criteria: {
+          scan_type: "early_radar_employers",
+          source_category: category,
+          companies: selected.map((s) => s.name),
+        },
+        jobs_found: result.examined,
+        jobs_added: stored,
+        jobs_removed: closedKept,
+      });
+
 
       return {
         ok: true,
