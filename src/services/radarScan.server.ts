@@ -742,6 +742,7 @@ export async function runRecruiterScan(options: {
         });
         continue;
       }
+      pageReads += 1;
       const content = await scrapeAdvertisement(verifiedUrl, hit.markdown);
       if (!content) {
         result.rejected += 1;
