@@ -156,6 +156,18 @@ export const scanRecruiterSources = createServerFn({ method: "POST" })
           selected.map((s) => s.name),
         );
 
+      await supabase.from("search_runs").insert({
+        search_criteria: {
+          scan_type: "early_radar_recruiters",
+          source_category: "Recruiters & Staffing",
+          companies: selected.map((s) => s.name),
+        },
+        jobs_found: result.examined,
+        jobs_added: stored,
+        jobs_removed: closedKept,
+      });
+
+
       console.log("[radarScan] diagnostics:", JSON.stringify(result.diagnostics).slice(0, 4_000));
 
       return {
