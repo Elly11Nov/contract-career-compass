@@ -51,12 +51,44 @@ export const scanRecruiterSources = createServerFn({ method: "POST" })
 
       let stored = 0;
       let duplicates = 0;
+      let closedKept = 0;
       for (const candidate of result.candidates) {
         const { data: sameVacancy } = await supabase
           .from("radar_vacancies")
           .select("id, extra_sources")
           .eq("dedupe_key", candidate.dedupe_key)
           .maybeSingle();
+
+        if (!candidate.is_open) {
+          // Closed/expired advert: keep it as hiring-history evidence only and
+          // make sure it is not shown (or left) as a current vacancy.
+          if (sameVacancy) await supabase.from("radar_vacancies").delete().eq("id", sameVacancy.id);
+          await supabase.from("radar_hiring_history").upsert(
+            {
+              company: candidate.client_company,
+              source_name: candidate.source_name,
+              source_category: candidate.source_category,
+              title: candidate.title,
+              city: candidate.city,
+              country: candidate.country,
+              employment_type: candidate.employment_type,
+              language_requirement: candidate.language_requirement,
+              url: candidate.url,
+              url_key: candidate.url_key,
+              advertised_at: candidate.source_published_at,
+              relevance: candidate.relevance,
+              relevance_score: candidate.relevance_score,
+              relevance_reason: candidate.relevance_reason,
+              role_category: candidate.role_category,
+              matched_skills: candidate.matched_skills,
+              is_current: false,
+              verification_status: candidate.verification_status,
+            },
+            { onConflict: "url_key" },
+          );
+          closedKept += 1;
+          continue;
+        }
 
         if (sameVacancy) {
           // Same vacancy already known through another source: record the extra
