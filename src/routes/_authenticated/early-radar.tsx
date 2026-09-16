@@ -106,11 +106,12 @@ function EarlyRadarPage() {
 
       <main className="mx-auto max-w-7xl space-y-4 px-4 py-6 lg:px-8">
         <div className="bg-card border-warning/40 rounded-lg border p-4 text-sm">
-          <p className="font-medium">Phase 1 — illustrative example data</p>
+          <p className="font-medium">Real data only — monitoring not connected yet</p>
           <p className="text-muted-foreground mt-1">
-            Everything on this page is marked <strong>Example data</strong> and is separate from
-            your real job list. Signals are evidence that a relevant role <em>may</em> be needed —
-            never a statement that a company will advertise a role.
+            The earlier illustrative companies, hiring history and placeholder links have been
+            removed. This page will only ever show companies, vacancies and signals that were
+            actually found on public sources. Signals mean a relevant role <em>may</em> be
+            needed — never a statement that a company will advertise a role.
           </p>
         </div>
 
@@ -126,7 +127,10 @@ function EarlyRadarPage() {
           <div className="mt-4">
             <TabsContent value="early-jobs">
               {earlyJobs.length === 0 ? (
-                <Empty message="No early vacancies detected yet." />
+                <Empty
+                  message="No real Early Radar vacancies detected yet."
+                  detail="Career-page and applicant-system monitoring still needs to be switched on. Once it is, vacancies found directly on employer sites appear here with the real link, the date first spotted and how they match your profile."
+                />
               ) : (
                 <div className="grid gap-3">
                   {earlyJobs.map((job) => (
@@ -174,11 +178,15 @@ function EarlyRadarPage() {
                           {relativeDays(job.first_detected_at)}
                           {job.published_at && ` · company posted ${formatDate(job.published_at)}`}
                         </span>
-                        <Button size="sm" asChild>
-                          <a href={job.url} target="_blank" rel="noopener noreferrer">
-                            Open vacancy
-                          </a>
-                        </Button>
+                        {isRealPublicUrl(job.url) ? (
+                          <Button size="sm" asChild>
+                            <a href={job.url} target="_blank" rel="noopener noreferrer">
+                              Open vacancy
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">No verified link</span>
+                        )}
                       </div>
                     </Card>
                   ))}
