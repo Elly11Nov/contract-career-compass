@@ -175,6 +175,12 @@ function normalizeHits(payload: unknown): ProviderHit[] {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Web search used only as a fallback when a source publishes no usable job list.
+ * Deliberately does NOT ask Firecrawl to read the result pages: page reading is
+ * charged per result, and individual vacancies are read later, only for the
+ * strongest candidates.
+ */
 async function providerSearch(query: string, limit: number): Promise<ProviderHit[]> {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     let res: Response;
@@ -184,7 +190,6 @@ async function providerSearch(query: string, limit: number): Promise<ProviderHit
         limit,
         sources: ["web"],
         location: "Switzerland",
-        scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
       });
     } catch (error) {
       if (error instanceof SearchProviderNotConfiguredError) throw error;
@@ -201,9 +206,11 @@ async function providerSearch(query: string, limit: number): Promise<ProviderHit
 }
 
 /**
- * Read a recruiter's own job-listing page and collect the individual vacancy
- * links it publishes. Search engines mostly index the listing page itself, so
- * without this step no single vacancy is ever reached.
+ * Stage 1 of discovery: read the source's own job-list/careers page once and
+ * collect the individual vacancy links it publishes, together with the link
+ * text and surrounding line, which usually already exposes role, location and
+ * employment type. That metadata is used as a free preliminary filter so that
+ * only strong candidates are opened individually in stage 2.
  */
 async function discoverFromListing(source: RadarSourceInput): Promise<ProviderHit[]> {
   const listing = source.jobs_url ?? source.site_url;
@@ -222,21 +229,137 @@ async function discoverFromListing(source: RadarSourceInput): Promise<ProviderHi
   if (!res.ok) return [];
   const payload = (await res.json()) as Record<string, unknown>;
   const data = (payload["data"] as Record<string, unknown> | undefined) ?? payload;
-  const raw = data["links"];
-  if (!Array.isArray(raw)) return [];
+  const markdown = typeof data["markdown"] === "string" ? (data["markdown"] as string) : "";
   const listingHost = hostOf(listing);
+
+  /** Link text + the line it appeared on, per absolute URL found in the markdown. */
+  const context = new Map<string, { title: string; line: string }>();
+  for (const line of markdown.split("\n")) {
+    const linkRe = /\[([^\]]{2,160})\]\(([^)\s]+)\)/g;
+    let match: RegExpExecArray | null;
+    while ((match = linkRe.exec(line))) {
+      const text = match[1]?.trim() ?? "";
+      const href = match[2] ?? "";
+      let abs: string;
+      try {
+        abs = new URL(href, listing).toString();
+      } catch {
+        continue;
+      }
+      const key = normalizeVacancyUrl(abs);
+      if (!context.has(key)) context.set(key, { title: text, line: line.trim().slice(0, 400) });
+    }
+  }
+
+  const raw = data["links"];
+  const urls: string[] = Array.isArray(raw)
+    ? raw
+        .map((entry) => (typeof entry === "string" ? entry : (entry as { url?: string })?.url))
+        .filter((u): u is string => typeof u === "string")
+    : [];
+  // Markdown-only links (relative hrefs) still count as discovered vacancies.
+  for (const [, _v] of context) void _v;
   const seen = new Set<string>();
   const hits: ProviderHit[] = [];
-  for (const entry of raw) {
-    const url = typeof entry === "string" ? entry : (entry as { url?: string })?.url;
-    if (!url || hostOf(url) !== listingHost) continue;
-    if (!isPlausibleVacancyUrl(url)) continue;
+  const consider = (url: string) => {
+    if (hostOf(url) !== listingHost) return;
+    if (!isPlausibleVacancyUrl(url)) return;
     const key = normalizeVacancyUrl(url);
-    if (seen.has(key)) continue;
+    if (seen.has(key)) return;
     seen.add(key);
-    hits.push({ url });
+    const meta = context.get(key);
+    hits.push({
+      url,
+      ...(meta?.title ? { title: meta.title } : {}),
+      ...(meta?.line ? { description: meta.line } : {}),
+    });
+  };
+  for (const url of urls) consider(url);
+  for (const [key] of context) {
+    if (!seen.has(key)) consider(key);
   }
   return hits;
+}
+
+/** Terms used only to rank listing candidates cheaply — never to qualify a role. */
+const PRELIM_ROLE_WORDS = [
+  "technical writer",
+  "technical author",
+  "documentation",
+  "docs",
+  "information architect",
+  "knowledge manager",
+  "knowledge engineer",
+  "content engineer",
+  "business analyst",
+  "requirements engineer",
+  "requirements analyst",
+  "functional analyst",
+  "process analyst",
+  "systems analyst",
+  "business process",
+  "transformation",
+  "business analysis",
+  "product analyst",
+];
+
+const PRELIM_SOFT_WORDS = [
+  "analyst",
+  "analysis",
+  "writer",
+  "technical",
+  "digital",
+  "ai ",
+  "knowledge",
+  "requirements",
+  "specification",
+  "product owner",
+];
+
+const PRELIM_NEGATIVE_WORDS = [
+  "apprentice",
+  "praktikum",
+  "internship",
+  "lehrstelle",
+  "student",
+  "cleaner",
+  "nurse",
+  "chef",
+  "driver",
+  "sales representative",
+  "account executive",
+  "electrician",
+  "mechanic",
+  "welder",
+  "security guard",
+];
+
+const PRELIM_GERMAN_HINTS = [
+  "deutschsprachig",
+  "deutsch erforderlich",
+  "german required",
+  "(m/w/d) deutsch",
+];
+
+/**
+ * Free preliminary relevance score for a listing entry, based only on metadata
+ * already present on the job-list page (title, link line, URL slug).
+ * Nothing qualifies here: this only decides the ORDER in which vacancy pages
+ * are opened, and which obvious non-matches are never opened at all.
+ */
+export function prelimScore(hit: ProviderHit): number {
+  const text = `${hit.title ?? ""} ${hit.description ?? ""} ${decodeURIComponent(hit.url).replace(/[-_/]+/g, " ")}`.toLowerCase();
+  let score = 0;
+  if (PRELIM_ROLE_WORDS.some((w) => text.includes(w))) score += 60;
+  else if (PRELIM_SOFT_WORDS.some((w) => text.includes(w))) score += 20;
+  if (PRIORITY_LOCATIONS.some((l) => text.includes(l.toLowerCase()))) score += 15;
+  if (/(schweiz|suisse|svizzera|\bch\b|z(ü|u)rich|gen(è|e)ve)/i.test(text)) score += 5;
+  if (/(contract|freelance|interim|temporary|fixed[- ]term|befristet|mandat)/i.test(text))
+    score += 10;
+  if (/\benglish\b/i.test(text)) score += 5;
+  if (PRELIM_GERMAN_HINTS.some((w) => text.includes(w))) score -= 40;
+  if (PRELIM_NEGATIVE_WORDS.some((w) => text.includes(w))) score -= 50;
+  return score;
 }
 
 function hostOf(url: string | null): string | null {
