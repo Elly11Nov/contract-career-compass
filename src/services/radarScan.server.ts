@@ -655,15 +655,30 @@ async function scoreAdvertisement(
   };
 }
 
-/** Scan the given recruiter sources and return verified, scored vacancies. */
+/**
+ * Scan the given sources and return verified, scored vacancies.
+ *
+ * Two-stage discovery, to keep provider usage low:
+ *   Stage 1 — read the source's own job-list page ONCE and use the titles,
+ *             lines and URL slugs it exposes as a free preliminary filter.
+ *   Stage 2 — open individual vacancy pages only for the strongest candidates,
+ *             best-first, within a per-source page-read budget, and apply the
+ *             unchanged full relevance/language/status analysis to them.
+ *
+ * Web search is a fallback used only when stage 1 yields no candidates, and it
+ * never asks the provider to read the result pages.
+ */
 export async function runRecruiterScan(options: {
   sources: RadarSourceInput[];
   knownUrlKeys?: string[];
   maxPerSource?: number;
+  /** Max individual vacancy pages opened per source (provider budget). */
+  maxPageReadsPerSource?: number;
 }): Promise<RadarScanResult> {
   const todayIso = new Date().toISOString().slice(0, 10);
   const known = new Set(options.knownUrlKeys ?? []);
   const maxPerSource = options.maxPerSource ?? 6;
+  const maxPageReads = options.maxPageReadsPerSource ?? 8;
 
   const result: RadarScanResult = {
     sources_scanned: [],
@@ -685,16 +700,30 @@ export async function runRecruiterScan(options: {
     }
     result.sources_scanned.push(source.name);
 
-    const hits: ProviderHit[] = [];
-    for (const query of queries) {
-      hits.push(...(await providerSearch(query, 8)));
-      await sleep(600);
+    // Stage 1: the source's own job list (one page read).
+    let hits = await discoverFromListing(source);
+    if (hits.length === 0) {
+      // Fallback only: the job list gave nothing usable.
+      for (const query of queries) {
+        hits.push(...(await providerSearch(query, 8)));
+        await sleep(600);
+      }
     }
-    hits.push(...(await discoverFromListing(source)));
+
+    // Rank candidates best-first and drop obvious non-matches entirely.
+    hits = hits
+      .map((hit) => ({ hit, score: prelimScore(hit) }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.hit);
 
     let acceptedForSource = 0;
+    let pageReads = 0;
     for (const hit of hits) {
       if (acceptedForSource >= maxPerSource) break;
+      // Budget stop: keep reading beyond the budget only if nothing qualified yet.
+      if (pageReads >= maxPageReads && acceptedForSource > 0) break;
+      if (pageReads >= maxPageReads * 2) break;
       if (!isPlausibleVacancyUrl(hit.url)) continue;
       const key = normalizeVacancyUrl(hit.url);
       if (seenKeys.has(key)) continue;
