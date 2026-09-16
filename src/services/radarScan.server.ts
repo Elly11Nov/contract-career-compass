@@ -294,7 +294,7 @@ function radarPrompt(recruiter: string, todayIso: string, isRecruiter = true) {
   return `You verify vacancies advertised ${isRecruiter ? `by the Swiss recruitment agency "${recruiter}"` : `on the careers site of the Swiss employer "${recruiter}"`}. Today is ${todayIso}.
 
 REJECT (qualifies=false) when ANY of the following is true:
-- the page is a listing/search page, an expired vacancy, or not a single vacancy advertisement
+- the page is a listing/search page or not a single vacancy advertisement
 - the location is not Switzerland
 - German is explicitly required and genuinely necessary for the role
 - the actual responsibilities and required skills do not substantively overlap the candidate profile below.
