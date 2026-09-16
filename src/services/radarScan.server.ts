@@ -258,7 +258,6 @@ async function discoverFromListing(source: RadarSourceInput): Promise<ProviderHi
         .filter((u): u is string => typeof u === "string")
     : [];
   // Markdown-only links (relative hrefs) still count as discovered vacancies.
-  for (const [, _v] of context) void _v;
   const seen = new Set<string>();
   const hits: ProviderHit[] = [];
   const consider = (url: string) => {
