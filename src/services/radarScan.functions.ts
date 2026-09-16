@@ -142,3 +142,217 @@ export const scanRecruiterSources = createServerFn({ method: "POST" })
       return { ok: false, error: message, provider_missing: providerMissing };
     }
   });
+
+export interface SignalScanSummary {
+  ok: boolean;
+  error?: string;
+  provider_missing?: boolean;
+  sources_scanned?: string[];
+  examined?: number;
+  qualified?: number;
+  rejected?: number;
+  stored?: number;
+  duplicates?: number;
+}
+
+/**
+ * Scans monitored employers (core targets or watchlist) for real, currently
+ * advertised vacancies, and records every qualifying advert in the hiring
+ * history so recent hiring patterns become visible. Nothing is invented.
+ */
+export const scanEmployerSources = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { category?: string; limit?: number; sourceNames?: string[] } | undefined) => data ?? {},
+  )
+  .handler(async ({ data, context }): Promise<RecruiterScanSummary> => {
+    const { runSourceScan } = await import("./radarScan.server");
+    const supabase = context.supabase;
+    const category = data.category ?? "Core Target Employers";
+
+    try {
+      let sourceQuery = supabase
+        .from("radar_sources")
+        .select("id, name, source_category, site_url, jobs_url")
+        .eq("source_category", category)
+        .eq("enabled", true)
+        .in("verification_status", ["verified", "site_only"]);
+      if (data.sourceNames?.length) sourceQuery = sourceQuery.in("name", data.sourceNames);
+
+      const { data: sources, error: sourceError } = await sourceQuery;
+      if (sourceError) throw sourceError;
+      if (!sources?.length) {
+        return { ok: false, error: `No monitored sources available in "${category}".` };
+      }
+      const selected = sources.slice(0, data.limit ?? 3);
+
+      const { data: existing } = await supabase.from("radar_vacancies").select("url_key");
+      const knownUrlKeys = (existing ?? []).map((r) => r.url_key);
+
+      const result = await runSourceScan({ sources: selected, knownUrlKeys });
+
+      let stored = 0;
+      let duplicates = 0;
+      for (const candidate of result.candidates) {
+        const { data: same } = await supabase
+          .from("radar_vacancies")
+          .select("id")
+          .eq("dedupe_key", candidate.dedupe_key)
+          .maybeSingle();
+
+        if (same) {
+          await supabase
+            .from("radar_vacancies")
+            .update({ last_seen_at: new Date().toISOString() })
+            .eq("id", same.id);
+          duplicates += 1;
+        } else {
+          const { error: insertError } = await supabase.from("radar_vacancies").insert({
+            title: candidate.title,
+            source_name: candidate.source_name,
+            source_category: candidate.source_category,
+            client_company: candidate.client_company,
+            city: candidate.city,
+            country: candidate.country,
+            employment_type: candidate.employment_type,
+            language_requirement: candidate.language_requirement,
+            url: candidate.url,
+            url_key: candidate.url_key,
+            dedupe_key: candidate.dedupe_key,
+            source_published_at: candidate.source_published_at,
+            relevance: candidate.relevance,
+            relevance_score: candidate.relevance_score,
+            relevance_reason: candidate.relevance_reason,
+            role_category: candidate.role_category,
+            matched_skills: candidate.matched_skills,
+            verification_status: candidate.verification_status,
+          });
+          if (insertError && insertError.code !== "23505") throw insertError;
+          if (insertError) duplicates += 1;
+          else stored += 1;
+        }
+
+        // Hiring-history evidence: this company really advertised this role.
+        await supabase.from("radar_hiring_history").upsert(
+          {
+            company: candidate.client_company,
+            source_name: candidate.source_name,
+            source_category: candidate.source_category,
+            title: candidate.title,
+            city: candidate.city,
+            country: candidate.country,
+            employment_type: candidate.employment_type,
+            language_requirement: candidate.language_requirement,
+            url: candidate.url,
+            url_key: candidate.url_key,
+            advertised_at: candidate.source_published_at,
+            relevance: candidate.relevance,
+            relevance_score: candidate.relevance_score,
+            relevance_reason: candidate.relevance_reason,
+            role_category: candidate.role_category,
+            matched_skills: candidate.matched_skills,
+            is_current: true,
+            verification_status: candidate.verification_status,
+          },
+          { onConflict: "url_key" },
+        );
+      }
+
+      await supabase
+        .from("radar_sources")
+        .update({ last_checked_at: new Date().toISOString() })
+        .in(
+          "name",
+          selected.map((s) => s.name),
+        );
+
+      return {
+        ok: true,
+        sources_scanned: result.sources_scanned,
+        sources_skipped: result.sources_skipped,
+        examined: result.examined,
+        qualified: result.qualified,
+        rejected: result.rejected,
+        stored,
+        duplicates,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Employer scan failed.";
+      const providerMissing =
+        error instanceof Error && error.name === "SearchProviderNotConfiguredError";
+      console.error("[radarScan:employer] failed:", message);
+      return { ok: false, error: message, provider_missing: providerMissing };
+    }
+  });
+
+/**
+ * Collects public business and transformation evidence for monitored companies.
+ * Signals are things to monitor — never a prediction that a role will appear.
+ */
+export const scanBusinessSignals = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { category?: string; limit?: number; sourceNames?: string[] } | undefined) => data ?? {},
+  )
+  .handler(async ({ data, context }): Promise<SignalScanSummary> => {
+    const { runSignalScan } = await import("./radarScan.server");
+    const supabase = context.supabase;
+
+    try {
+      let sourceQuery = supabase
+        .from("radar_sources")
+        .select("id, name, source_category, site_url, jobs_url")
+        .eq("enabled", true);
+      if (data.category) sourceQuery = sourceQuery.eq("source_category", data.category);
+      if (data.sourceNames?.length) sourceQuery = sourceQuery.in("name", data.sourceNames);
+
+      const { data: sources, error: sourceError } = await sourceQuery;
+      if (sourceError) throw sourceError;
+      if (!sources?.length) return { ok: false, error: "No monitored companies to check." };
+      const selected = sources.slice(0, data.limit ?? 3);
+
+      const { data: existing } = await supabase.from("radar_signals").select("url_key");
+      const result = await runSignalScan({
+        sources: selected,
+        knownUrlKeys: (existing ?? []).map((r) => r.url_key),
+      });
+
+      let stored = 0;
+      let duplicates = 0;
+      for (const signal of result.signals) {
+        const { error: insertError } = await supabase.from("radar_signals").insert(signal);
+        if (insertError) {
+          if (insertError.code === "23505") {
+            duplicates += 1;
+            continue;
+          }
+          throw insertError;
+        }
+        stored += 1;
+      }
+
+      await supabase
+        .from("radar_sources")
+        .update({ last_checked_at: new Date().toISOString() })
+        .in(
+          "name",
+          selected.map((s) => s.name),
+        );
+
+      return {
+        ok: true,
+        sources_scanned: result.sources_scanned,
+        examined: result.examined,
+        qualified: result.qualified,
+        rejected: result.rejected,
+        stored,
+        duplicates,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Signal scan failed.";
+      const providerMissing =
+        error instanceof Error && error.name === "SearchProviderNotConfiguredError";
+      console.error("[radarScan:signals] failed:", message);
+      return { ok: false, error: message, provider_missing: providerMissing };
+    }
+  });
