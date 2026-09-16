@@ -302,10 +302,7 @@ LANGUAGE RULES:
 - If the requirement is not stated, use "Unknown". Never assume English because the company is
   Swiss or international.
 
-CLIENT RULE:
-- The advertising agency is the SOURCE, never the employer. If the end client/hiring company is
-  named in the advertisement, put it in client_company. If it is not named, return exactly
-  "Not disclosed". Never infer or guess the client from hints.
+${clientRule}
 
 CANDIDATE PROFILE:
 ${CANDIDATE_PROFILE}
