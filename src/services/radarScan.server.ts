@@ -272,8 +272,20 @@ const RADAR_SCHEMA = `{
   "matched_skills": string[]
 }`;
 
-function radarPrompt(recruiter: string, todayIso: string) {
-  return `You verify vacancies advertised by the Swiss recruitment agency "${recruiter}". Today is ${todayIso}.
+export function isRecruiterCategory(category: string): boolean {
+  return /recruiter/i.test(category);
+}
+
+function radarPrompt(recruiter: string, todayIso: string, isRecruiter = true) {
+  const clientRule = isRecruiter
+    ? `CLIENT RULE:
+- The advertising agency is the SOURCE, never the employer. If the end client/hiring company is
+  named in the advertisement, put it in client_company. If it is not named, return exactly
+  "Not disclosed". Never infer or guess the client from hints.`
+    : `EMPLOYER RULE:
+- The advertisement is published by the employer itself. Put the employing company in
+  client_company exactly as the page names it. Never invent a different company.`;
+  return `You verify vacancies advertised ${isRecruiter ? `by the Swiss recruitment agency "${recruiter}"` : `on the careers site of the Swiss employer "${recruiter}"`}. Today is ${todayIso}.
 
 REJECT (qualifies=false) when ANY of the following is true:
 - the page is a listing/search page, an expired vacancy, or not a single vacancy advertisement
