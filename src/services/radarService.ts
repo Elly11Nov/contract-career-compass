@@ -218,6 +218,7 @@ export async function getTargetCompanies(): Promise<TargetCompany[]> {
 
 export const radarService = {
   getEarlyJobs,
+  getHiringHistory,
   getPotentialOpportunities,
   getTargetCompanies,
   isRealPublicUrl,
