@@ -30,7 +30,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -45,6 +45,15 @@ function AuthPage() {
     event.preventDefault();
     setBusy(true);
     try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Reset link sent. Check your email (and spam folder).");
+        setMode("signin");
+        return;
+      }
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -73,7 +82,11 @@ function AuthPage() {
       <div className="bg-card w-full max-w-sm rounded-lg border p-6 shadow-sm">
         <h1 className="text-xl font-semibold tracking-tight">Contract Job Finder</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          {mode === "signin" ? "Sign in to your dashboard." : "Create your account."}
+          {mode === "signin"
+            ? "Sign in to your dashboard."
+            : mode === "signup"
+              ? "Create your account."
+              : "Enter your email and we'll send you a reset link."}
         </p>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div className="space-y-2">
@@ -87,29 +100,56 @@ function AuthPage() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          {mode !== "forgot" && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+            {busy
+              ? "Please wait…"
+              : mode === "signin"
+                ? "Sign in"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Send reset link"}
           </Button>
         </form>
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground mt-4 w-full text-center text-sm"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        >
-          {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
-        </button>
+        {mode === "signin" && (
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground mt-3 w-full text-center text-sm"
+            onClick={() => setMode("forgot")}
+          >
+            Forgot password?
+          </button>
+        )}
+        {mode === "forgot" ? (
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground mt-4 w-full text-center text-sm"
+            onClick={() => setMode("signin")}
+          >
+            Back to sign in
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground mt-4 w-full text-center text-sm"
+            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+          >
+            {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
+          </button>
+        )}
       </div>
     </div>
   );
