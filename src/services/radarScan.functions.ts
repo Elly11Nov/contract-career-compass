@@ -257,7 +257,7 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
             relevance_reason: candidate.relevance_reason,
             role_category: candidate.role_category,
             matched_skills: candidate.matched_skills,
-            is_current: true,
+            is_current: candidate.is_open,
             verification_status: candidate.verification_status,
           },
           { onConflict: "url_key" },
