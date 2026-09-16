@@ -196,7 +196,10 @@ function EarlyRadarPage() {
 
             <TabsContent value="opportunities">
               {opportunities.length === 0 ? (
-                <Empty message="No hiring signals detected yet." />
+                <Empty
+                  message="No hiring signals detected yet."
+                  detail="When public signals are found — repeated analysis or documentation hiring, transformation or AI programmes, new products or reorganisations — the company appears here as a possible upcoming role worth monitoring."
+                />
               ) : (
                 <div className="grid gap-3">
                   {opportunities.map((opp) => (
@@ -263,7 +266,10 @@ function EarlyRadarPage() {
 
             <TabsContent value="companies">
               {companies.length === 0 ? (
-                <Empty message="No target companies yet." />
+                <Empty
+                  message="No target companies yet."
+                  detail="Employers you decide to monitor will be listed here with their real careers page link, past relevant hiring and the signals currently observed."
+                />
               ) : (
                 <div className="grid gap-3">
                   {companies.map((c) => (
@@ -313,12 +319,16 @@ function EarlyRadarPage() {
                           Last checked {formatDate(c.last_checked_at)} ·{" "}
                           {relativeDays(c.last_checked_at)}
                         </span>
-                        {c.careers_url && (
+                        {isRealPublicUrl(c.careers_url) ? (
                           <Button size="sm" variant="outline" asChild>
-                            <a href={c.careers_url} target="_blank" rel="noopener noreferrer">
+                            <a href={c.careers_url!} target="_blank" rel="noopener noreferrer">
                               Careers page
                             </a>
                           </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">
+                            No verified careers page
+                          </span>
                         )}
                       </div>
                     </Card>
