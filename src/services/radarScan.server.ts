@@ -366,7 +366,14 @@ async function scoreAdvertisement(
       body: JSON.stringify({
         model: AI_MODEL,
         messages: [
-          { role: "system", content: radarPrompt(source.name, todayIso) },
+          {
+            role: "system",
+            content: radarPrompt(
+              source.name,
+              todayIso,
+              isRecruiterCategory(source.source_category),
+            ),
+          },
           {
             role: "user",
             content: `URL: ${verifiedUrl}\nPage title: ${hit.title ?? "unknown"}\n\nADVERTISEMENT:\n${content.slice(0, 18_000)}`,
