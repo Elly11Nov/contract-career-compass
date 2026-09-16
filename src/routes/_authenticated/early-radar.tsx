@@ -11,6 +11,7 @@ import {
   getEarlyJobs,
   getPotentialOpportunities,
   getTargetCompanies,
+  isRealPublicUrl,
 } from "@/services/radarService";
 
 export const Route = createFileRoute("/_authenticated/early-radar")({
@@ -43,10 +44,11 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Empty({ message }: { message: string }) {
+function Empty({ message, detail }: { message: string; detail?: string }) {
   return (
-    <div className="bg-card border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
-      {message}
+    <div className="bg-card border-border rounded-lg border border-dashed p-10 text-center">
+      <p className="text-sm font-medium">{message}</p>
+      {detail && <p className="text-muted-foreground mx-auto mt-2 max-w-xl text-sm">{detail}</p>}
     </div>
   );
 }
