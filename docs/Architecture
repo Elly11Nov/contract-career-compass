@@ -1,0 +1,1076 @@
+# Early Radar — Architecture
+
+## 1. Purpose
+
+Early Radar is an extension of **Contract Career Compass**.
+
+It uses the existing application's web discovery, vacancy processing, AI analysis and database infrastructure to identify:
+
+1. Relevant current vacancies
+2. Historical hiring activity
+3. Hiring patterns
+4. Later, business and transformation signals
+
+Early Radar is not a separate application.
+
+The architecture should reuse existing Contract Career Compass components wherever practical and avoid creating duplicate functionality.
+
+---
+
+# 2. Architectural Principles
+
+Early Radar follows these principles:
+
+### Reuse before rebuilding
+
+Use the existing:
+
+* Firecrawl integration
+* Vacancy discovery
+* AI analysis
+* Supabase database
+* Authentication
+* Search-run infrastructure
+* Existing vacancy handling
+* Existing deduplication mechanisms where appropriate
+
+### Evidence before prediction
+
+The system records what it actually finds.
+
+It must distinguish:
+
+* Observed information
+* Derived patterns
+* Unknown information
+* Future predictions
+
+Early Radar should not present predictions as facts.
+
+### Real sources only
+
+Vacancies, companies, URLs and hiring information must come from real, verifiable sources.
+
+No synthetic or placeholder data should be used in production.
+
+### Transparency
+
+A user should be able to understand:
+
+* What was found
+* Where it came from
+* When it was found
+* Why it was considered relevant
+
+### Incremental implementation
+
+Phase 1 and Phase 2 should be implemented and tested separately.
+
+Phase 3 is a future extension.
+
+---
+
+# 3. High-Level Architecture
+
+```text
+                         ┌──────────────────────┐
+                         │   Target Employers   │
+                         │    & Recruiters      │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │      Discovery       │
+                         │      Firecrawl       │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │ Vacancy / Source     │
+                         │     Extraction       │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │ URL Verification &   │
+                         │    Normalisation     │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │ Language Filtering   │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │   AI Relevance       │
+                         │      Analysis        │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │    Deduplication     │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │      Supabase        │
+                         │    Data Storage      │
+                         └──────────┬───────────┘
+                                    │
+                    ┌───────────────┼────────────────┐
+                    ▼               ▼                ▼
+             Current Jobs     Hiring History   Hiring Patterns
+               Phase 1           Phase 2          Phase 2
+                    │               │                │
+                    └───────────────┼────────────────┘
+                                    ▼
+                         ┌──────────────────────┐
+                         │    Early Radar UI   │
+                         └──────────────────────┘
+```
+
+---
+
+# 4. System Context
+
+Early Radar sits alongside the existing Job Search functionality.
+
+```text
+                    Contract Career Compass
+                              │
+             ┌────────────────┴────────────────┐
+             │                                 │
+             ▼                                 ▼
+        Existing Job Search               Early Radar
+             │                                 │
+             │                    ┌────────────┼────────────┐
+             │                    │            │            │
+             │                    ▼            ▼            ▼
+             │                 Phase 1      Phase 2      Phase 3
+             │                 Current      Hiring       Business
+             │                 Jobs         History      Signals
+             │
+             └────────────── Shared infrastructure ──────────────
+                              │
+                    Firecrawl / Supabase /
+                    AI / Authentication /
+                    Search infrastructure
+```
+
+Early Radar should not alter the behaviour of the existing Job Search unnecessarily.
+
+---
+
+# 5. Source Layer
+
+The source layer identifies where Early Radar should look.
+
+## Employer sources
+
+Employer sources primarily include:
+
+* Company career pages
+* Company job portals
+* Individual vacancy pages
+
+## Recruiter sources
+
+Recruiter sources include:
+
+* Recruiter vacancy pages
+* Recruiter search pages
+* Staffing agency vacancy portals
+
+A search-results page can be used for discovery.
+
+However, the preferred final source is the **individual vacancy page**.
+
+---
+
+# 6. Target Configuration
+
+Companies and recruiters should be represented as data rather than embedded directly into scanning logic.
+
+Conceptually:
+
+```text
+Target
+│
+├── Employer
+│    ├── Core
+│    ├── Target
+│    └── Watchlist
+│
+└── Recruiter
+```
+
+This allows the monitored list to evolve without changing the underlying discovery system.
+
+---
+
+# 7. Discovery Layer
+
+The discovery layer is responsible for finding candidate sources.
+
+```text
+Target
+   ↓
+Search / Career Page
+   ↓
+Potential Vacancy
+   ↓
+Individual Vacancy Page
+```
+
+The discovery layer should return enough information for the next stage to verify the source.
+
+Discovery is not the same as verification.
+
+A search result is a **candidate finding**, not automatically a valid Early Radar vacancy.
+
+---
+
+# 8. Firecrawl Integration
+
+Firecrawl is the primary web discovery and page-reading mechanism for Early Radar.
+
+It can be used to:
+
+* Search the web
+* Read career pages
+* Read recruiter pages
+* Extract vacancy content
+* Follow relevant links
+* Locate individual vacancy pages
+
+The existing Contract Career Compass Firecrawl integration should be reused.
+
+The recruiter-search improvements already implemented must be preserved, particularly:
+
+* Correct location handling
+* Individual vacancy-link discovery
+
+---
+
+# 9. Verification Layer
+
+After discovery, a candidate vacancy passes through verification.
+
+```text
+Potential vacancy
+       ↓
+Is source real?
+       ↓
+Can vacancy page be verified?
+       ↓
+Is vacancy information available?
+       ↓
+Valid Early Radar source
+```
+
+The system should verify, where possible:
+
+* Title
+* Organisation
+* URL
+* Location
+* Employment type
+* Language
+* Description
+* Publication information
+
+Unverified or synthetic information must not become a valid opportunity.
+
+---
+
+# 10. URL Handling
+
+URLs are an important part of Early Radar provenance.
+
+The system should:
+
+* Preserve the original source
+* Normalise URLs where appropriate
+* Prefer canonical individual vacancy URLs
+* Detect duplicate URLs
+* Avoid fake or placeholder URLs
+
+Example:
+
+```text
+Career page
+     ↓
+Search result
+     ↓
+Individual vacancy
+     ↓
+Canonical vacancy URL
+```
+
+---
+
+# 11. Language Filtering
+
+Language is a dedicated filtering step.
+
+The fundamental rule is:
+
+> **German may be preferred, but German must not be required.**
+
+```text
+Vacancy
+   │
+   ├── English                  → Include
+   ├── English + Italian        → Include
+   ├── English + French         → Include
+   ├── English + German preferred → Include
+   ├── German required          → Exclude
+   └── Unknown                  → Record as Unknown
+```
+
+The requirement must be evaluated for the specific vacancy.
+
+The system must not assume that an international Swiss employer uses English.
+
+---
+
+# 12. Relevance Analysis
+
+After verification and language filtering, the vacancy is evaluated against the candidate profile.
+
+The relevance layer considers:
+
+### Documentation
+
+* Technical Writing
+* Technical Documentation
+* API Documentation
+* Documentation Engineering
+* DITA/XML
+* Docs-as-code
+
+### Analysis
+
+* Business Analysis
+* Technical Business Analysis
+* Requirements Engineering
+* Requirements Analysis
+* Functional Analysis
+* Process Analysis
+
+### Technology
+
+* APIs
+* JSON
+* OpenAPI/Swagger
+* Postman
+* ServiceNow
+* Jira
+* Confluence
+
+### Transformation
+
+* Digital Transformation
+* Technology Transformation
+* Business Transformation
+
+### Knowledge
+
+* Knowledge Management
+* Knowledge Engineering
+* Content Governance
+* Information Architecture
+
+### AI
+
+* AI Business Analysis
+* AI Transformation
+* AI Requirements
+* AI Knowledge Management
+* AI Documentation
+* AI-enabled workflows
+
+The analysis should consider the actual vacancy content.
+
+Job title alone is insufficient.
+
+---
+
+# 13. Relevance Categories
+
+A simple conceptual model is:
+
+```text
+Vacancy
+   │
+   ├── Strong relevance
+   ├── Potential relevance
+   └── Not relevant
+```
+
+The system should retain enough explanation to understand the relevance assessment.
+
+An opaque score should not be the sole explanation for why a vacancy was included.
+
+---
+
+# 14. Recruiter Architecture
+
+Recruiters require a different data relationship.
+
+```text
+┌─────────────┐
+│  Recruiter  │
+└──────┬──────┘
+       │
+       │ advertises
+       ▼
+┌─────────────┐
+│   Vacancy   │
+└──────┬──────┘
+       │
+       │ client disclosed?
+       ▼
+┌─────────────┐
+│   Employer  │
+└─────────────┘
+```
+
+The employer/client relationship is optional.
+
+If the recruiter does not disclose the client:
+
+```text
+client = undisclosed
+```
+
+The system must not infer the client.
+
+This is particularly important when analysing historical recruiter activity.
+
+---
+
+# 15. Deduplication
+
+The same vacancy may be discovered through several sources.
+
+```text
+Employer career page ──┐
+                       │
+Recruiter page ────────┼──→ Same vacancy
+                       │
+Other source ──────────┘
+```
+
+The system should identify and consolidate duplicate records where they represent the same vacancy.
+
+Potential deduplication signals include:
+
+* Canonical URL
+* Employer
+* Job title
+* Location
+* Vacancy identifier
+* Other stable source identifiers
+
+The exact mechanism should follow existing Contract Career Compass implementation where possible.
+
+---
+
+# 16. Vacancy Lifecycle
+
+A vacancy can move through several states:
+
+```text
+Discovered
+    ↓
+Verified
+    ↓
+Language evaluated
+    ↓
+Relevance evaluated
+    ↓
+Deduplicated
+    ↓
+Stored
+    ↓
+Displayed
+```
+
+A vacancy may later become:
+
+```text
+Active
+Expired
+Closed
+Unknown
+```
+
+The exact status model should follow the existing application where possible.
+
+---
+
+# 17. Detection Dates
+
+Two dates are particularly important.
+
+### source_published_at
+
+The date the source indicates that the vacancy was published.
+
+### first_detected_at
+
+The date Early Radar first discovered the vacancy.
+
+They should not be treated as the same value.
+
+Example:
+
+```text
+Published:       10 September
+First detected:  15 September
+```
+
+This distinction allows Early Radar to measure how early it detects opportunities.
+
+A future field such as:
+
+```text
+linkedin_first_seen_at
+```
+
+could later be used for comparison.
+
+LinkedIn scraping is not required for the current implementation.
+
+---
+
+# 18. Phase 1 Data Flow
+
+Phase 1 focuses on current vacancies.
+
+```text
+Target
+  ↓
+Firecrawl
+  ↓
+Discovery
+  ↓
+Individual vacancy
+  ↓
+Verification
+  ↓
+Language filter
+  ↓
+AI relevance
+  ↓
+Deduplication
+  ↓
+Supabase
+  ↓
+Current Jobs
+```
+
+The output is:
+
+> **Real, verified, currently relevant vacancies.**
+
+---
+
+# 19. Phase 2 Data Flow
+
+Phase 2 builds historical information from vacancy records and other verified historical sources.
+
+```text
+Historical sources
+       ↓
+Historical vacancy records
+       ↓
+12-month period
+       ↓
+Hiring activity
+       ↓
+Role-family analysis
+       ↓
+Hiring patterns
+       ↓
+Company hiring profile
+```
+
+Initial period:
+
+**15 September 2025 – 16 September 2026**
+
+---
+
+# 20. Historical Hiring Model
+
+Phase 2 must distinguish:
+
+```text
+Vacancy advertised
+        │
+        ├── Hire confirmed
+        │
+        └── Outcome unknown
+```
+
+A vacancy does not automatically represent a confirmed hire.
+
+This distinction should be preserved in the data model.
+
+---
+
+# 21. Hiring Patterns
+
+Patterns are derived from historical evidence.
+
+For example:
+
+```text
+Company
+│
+├── 5 relevant vacancies
+│
+├── Documentation      3
+├── Business Analysis  1
+└── Requirements       1
+```
+
+Additional dimensions can include:
+
+* Permanent vs contract
+* Location
+* Role family
+* Recruiter involvement
+* Time period
+* Repeated hiring
+
+Patterns should be traceable back to the underlying records.
+
+---
+
+# 22. Company Radar Model
+
+The conceptual company view is:
+
+```text
+                         COMPANY
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          ▼                 ▼                 ▼
+    Current Jobs      Hiring History    Business Signals
+       Phase 1             Phase 2          Phase 3
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            ▼
+                     Company Radar
+```
+
+For the current implementation, only Phase 1 and Phase 2 are active.
+
+---
+
+# 23. Conceptual Data Model
+
+The core entities are:
+
+```text
+Employer
+Recruiter
+Target
+Vacancy
+Source
+Hiring Event
+Relevance Assessment
+Hiring Pattern
+```
+
+Conceptual relationships:
+
+```text
+Employer ────────< Vacancy
+
+Recruiter ───────< Vacancy
+
+Vacancy ────────── Source
+
+Vacancy ────────── Relevance Assessment
+
+Vacancy ────────── Hiring Event
+
+Employer ─────────< Hiring Pattern
+```
+
+A vacancy may belong directly to an employer or be associated with a recruiter.
+
+---
+
+# 24. Suggested Vacancy Data
+
+The existing database schema should be reused where appropriate.
+
+Conceptually, Early Radar needs to support information such as:
+
+```text
+id
+title
+employer
+recruiter
+client
+location
+employment_type
+language
+source_url
+source_type
+source_published_at
+first_detected_at
+status
+role_family
+relevance
+```
+
+These are conceptual fields, not necessarily instructions to create every field as a new database column.
+
+Before adding schema, inspect the existing database and reuse existing fields where possible.
+
+---
+
+# 25. Search Runs
+
+Early Radar should use the existing search-run infrastructure where possible.
+
+Conceptually:
+
+```text
+Search Run
+    │
+    ├── Target
+    ├── Search parameters
+    ├── Start time
+    ├── End time
+    ├── Results found
+    └── Processing status
+```
+
+This provides traceability for discovery operations.
+
+Existing `search_runs` functionality should not be duplicated unnecessarily.
+
+---
+
+# 26. Storage
+
+Supabase provides persistent storage for Early Radar information.
+
+The database should support:
+
+* Current vacancies
+* Historical vacancies
+* Employers
+* Recruiters
+* Sources
+* Relevance information
+* Detection dates
+* Hiring information
+* Search runs
+
+Any new database structures should be introduced through appropriate migrations.
+
+Existing authentication and Row Level Security must be preserved.
+
+---
+
+# 27. Processing Pipeline
+
+The overall processing pipeline is:
+
+```text
+        TARGET
+          │
+          ▼
+      DISCOVERY
+          │
+          ▼
+       EXTRACT
+          │
+          ▼
+       VERIFY
+          │
+          ▼
+      LANGUAGE
+          │
+          ▼
+       RELEVANCE
+          │
+          ▼
+      DEDUPLICATE
+          │
+          ▼
+        STORE
+          │
+          ▼
+        DISPLAY
+```
+
+Phase 2 adds:
+
+```text
+Historical data
+      ↓
+Classification
+      ↓
+Hiring events
+      ↓
+Pattern analysis
+```
+
+---
+
+# 28. Error and Unknown Handling
+
+Early Radar should explicitly support uncertainty.
+
+Examples:
+
+```text
+Language = Unknown
+Client = Undisclosed
+Hiring outcome = Unknown
+Publication date = Unknown
+```
+
+Unknown information should remain unknown.
+
+The system must not fill gaps through assumptions.
+
+---
+
+# 29. Evidence and Provenance
+
+Every important finding should retain its source.
+
+Conceptually:
+
+```text
+Finding
+   │
+   ├── Source URL
+   ├── Source type
+   ├── Published date
+   ├── Detection date
+   └── Supporting information
+```
+
+This allows the user to inspect the evidence behind an Early Radar result.
+
+---
+
+# 30. Phase Boundaries
+
+## Phase 1
+
+**Current vacancies**
+
+Question:
+
+> What relevant jobs are available now?
+
+Focus:
+
+* Discovery
+* Verification
+* Language
+* Relevance
+* Deduplication
+* Current vacancy display
+
+## Phase 2
+
+**Hiring history and patterns**
+
+Question:
+
+> What has this company or recruiter actually been hiring for?
+
+Focus:
+
+* Historical vacancies
+* Previous 12 months
+* Hiring outcomes
+* Role families
+* Permanent/contract activity
+* Recruiter activity
+* Hiring patterns
+
+## Phase 3
+
+**Business and transformation signals**
+
+Future question:
+
+> What verified business or technology changes might make a company worth watching?
+
+Potential signals:
+
+* Digital transformation
+* AI initiatives
+* New platforms
+* New products
+* API programmes
+* Regulatory programmes
+* Knowledge-management initiatives
+* Service-management programmes
+* M&A
+* Expansion
+* Technology investment
+
+Phase 3 should remain separate from the current Phase 1/2 implementation.
+
+---
+
+# 31. Security
+
+Early Radar uses the existing Contract Career Compass security model.
+
+Important principles:
+
+* Do not expose Supabase service-role credentials to the client.
+* Keep secrets in environment configuration.
+* Preserve existing authentication.
+* Preserve Row Level Security.
+* Do not store credentials in application data.
+* Do not commit secrets to source control.
+
+---
+
+# 32. Performance and Cost
+
+Early Radar should avoid unnecessary web crawling and AI processing.
+
+The system should:
+
+* Start with a small target set
+* Reuse existing search results where appropriate
+* Deduplicate before expensive processing where possible
+* Avoid repeatedly processing unchanged vacancies
+* Store detection information
+* Expand the monitored target list gradually
+
+This is particularly important because Firecrawl and AI processing can consume resources.
+
+---
+
+# 33. Initial Implementation Strategy
+
+The implementation should proceed in controlled steps.
+
+### Step 1
+
+Test Phase 1 with:
+
+**Employers**
+
+* Swiss Re
+* Zurich Insurance
+* Julius Baer
+* Bank J. Safra Sarasin
+* Sika
+
+**Recruiters**
+
+* Hays
+* Coopers Group
+* Robert Half
+
+### Step 2
+
+Verify:
+
+* Real vacancies are found
+* Individual vacancy pages are found
+* URLs are valid
+* German-required vacancies are excluded
+* Relevant English-language vacancies are retained
+* Recruiter/client relationships are correct
+* Duplicates are handled
+* Detection dates are stored
+
+### Step 3
+
+Expand the target list.
+
+### Step 4
+
+Implement Phase 2 historical analysis.
+
+Do not begin with a massive historical crawl.
+
+---
+
+# 34. Architecture Evolution
+
+The architecture is deliberately designed to grow.
+
+```text
+                EARLY RADAR
+                     │
+       ┌─────────────┼─────────────┐
+       │             │             │
+       ▼             ▼             ▼
+    Phase 1       Phase 2       Phase 3
+    Current       Historical    Business
+    Jobs          Hiring        Signals
+       │             │             │
+       └─────────────┼─────────────┘
+                     ▼
+              Company Radar
+```
+
+The underlying infrastructure remains shared.
+
+New phases should add capabilities rather than create separate applications or duplicate pipelines.
+
+---
+
+# 35. Core Architecture Principle
+
+The central Early Radar architecture can be summarised as:
+
+```text
+DISCOVER
+   ↓
+VERIFY
+   ↓
+FILTER
+   ↓
+ANALYSE
+   ↓
+DEDUPLICATE
+   ↓
+STORE
+   ↓
+SHOW EVIDENCE
+```
+
+For Phase 1:
+
+```text
+Current vacancies → relevant opportunities
+```
+
+For Phase 2:
+
+```text
+Historical vacancies → hiring activity → hiring patterns
+```
+
+For Phase 3:
+
+```text
+Business signals → company context
+```
+
+The system should always preserve the distinction between **what has been observed**, **what can reasonably be derived from the evidence**, and **what remains unknown**.
