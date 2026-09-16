@@ -540,7 +540,7 @@ async function scoreAdvertisement(
   }
 
   const language = str(parsed["language_requirement"], "Unknown");
-  if (/german required/i.test(language)) {
+  if (/german required/i.test(language) || requiresGerman(content)) {
     return { candidate: null, reason: "german_required" };
   }
   const country = str(parsed["country"], "Switzerland");
