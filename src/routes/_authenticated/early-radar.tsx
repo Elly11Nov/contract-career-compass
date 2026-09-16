@@ -10,10 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExampleBadge, RadarStatusBadge, SkillChips } from "@/components/radar/RadarBadges";
 import { formatDate, relativeDays } from "@/lib/job-utils";
 import { supabase } from "@/integrations/supabase/client";
-import { scanRecruiterSources } from "@/services/radarScan.functions";
+import {
+  scanBusinessSignals,
+  scanEmployerSources,
+  scanRecruiterSources,
+} from "@/services/radarScan.functions";
 import type { SourceCategory } from "@/types/radar";
 import {
   getEarlyJobs,
+  getHiringHistory,
   getPotentialOpportunities,
   getTargetCompanies,
   isRealPublicUrl,
@@ -23,9 +28,10 @@ type SourceFilter = "All" | SourceCategory;
 
 const SOURCE_FILTERS: SourceFilter[] = [
   "All",
+  "Core Target Employers",
   "Target Employers",
   "Recruiters & Staffing",
-  "Watchlist",
+  "Watchlist Employers",
 ];
 
 export const Route = createFileRoute("/_authenticated/early-radar")({
