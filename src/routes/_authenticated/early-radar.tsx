@@ -432,6 +432,61 @@ function EarlyRadarPage() {
               )}
             </TabsContent>
 
+            <TabsContent value="history">
+              {history.length === 0 ? (
+                <Empty
+                  message="No hiring history recorded yet."
+                  detail="Every relevant vacancy verified during a scan is recorded here, so you can see which companies have actually advertised roles like yours — permanent, contract, freelance, interim, temporary or fixed-term."
+                />
+              ) : (
+                <div className="grid gap-3">
+                  {history.map((h) => (
+                    <Card key={h.id}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h2 className="text-base font-semibold leading-tight">{h.title}</h2>
+                          <p className="text-muted-foreground mt-1 text-sm">
+                            {h.company} · 📍 {h.city ?? h.country}, {h.country} · via{" "}
+                            {h.source_name}
+                          </p>
+                        </div>
+                        <RadarStatusBadge status={h.relevance} label="Relevance" />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="outline">{h.employment_type}</Badge>
+                        <Badge variant="outline">{h.language_requirement}</Badge>
+                        <Badge variant={h.is_current ? "secondary" : "outline"}>
+                          {h.is_current ? "Currently advertised" : "Previously advertised"}
+                        </Badge>
+                      </div>
+
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {h.relevance_reason}
+                      </p>
+                      <SkillChips skills={h.matched_skills} />
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                        <span className="text-muted-foreground text-xs">
+                          {h.advertised_at
+                            ? `Advertised ${formatDate(h.advertised_at)}`
+                            : "No publication date stated"}{" "}
+                          · first seen {formatDate(h.first_detected_at)}
+                        </span>
+                        {isRealPublicUrl(h.url) && (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={h.url} target="_blank" rel="noopener noreferrer">
+                              Open advert
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
             <TabsContent value="companies">
               {filteredCompanies.length === 0 ? (
                 <Empty
