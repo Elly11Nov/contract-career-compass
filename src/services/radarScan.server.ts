@@ -426,7 +426,11 @@ REJECT (qualifies=false) when ANY of the following is true:
 LANGUAGE RULES:
 - Accept English-sufficient roles, English + French, English + Italian, and roles where German is
   only preferred/an advantage (language_requirement "English (German an advantage)").
-- Reject when German is mandatory for doing the job.
+- Reject (language_requirement "German required") whenever the page makes German mandatory in any
+  wording: "German required", "fluent German", "German-speaking", "German proficiency",
+  "German C1/C2/B2", "German and English required", or any equivalent.
+- Do NOT reject when German is only preferred, an advantage, advantageous, desirable, nice to have
+  or a plus.
 - If the requirement is not stated, use "Unknown". Never assume English because the company is
   Swiss or international.
 
