@@ -40,12 +40,26 @@ export type PotentialRoleCategory =
  * 1. Early Jobs — an ACTUAL vacancy found on a company career site / ATS,
  * ideally before it reaches LinkedIn or the major boards.
  */
+/** Where a monitored source sits: a direct employer, an agency, or a watch item. */
+export type SourceCategory = "Target Employers" | "Recruiters & Staffing" | "Watchlist";
+
 export interface EarlyJob {
   id: string;
+  /** The employer/client the role is for; "Not disclosed" for undisclosed agency clients. */
   company: string;
   title: string;
   city: string;
   country: Country;
+  /** Which channel the vacancy came through. */
+  source_category: SourceCategory;
+  /** Contract / Permanent / Temporary / Fixed-term / Interim / Unknown. */
+  employment_type: string;
+  /** Language requirement as stated; "Unknown" when the advertisement is unclear. */
+  language_requirement: string;
+  /** 0-100 relevance score behind the High/Medium/Low status. */
+  relevance_score: number;
+  /** Other channels the same vacancy was seen through. */
+  other_sources: { source: string; url?: string }[];
   /** ISO datetime we first saw this vacancy. */
   first_detected_at: string;
   /** ISO date the company published it, when the page states one. */
@@ -96,6 +110,11 @@ export interface TargetCompany {
   last_checked_at: string;
   careers_url: string | null;
   is_example: boolean;
+  /** Which channel this monitored source belongs to. */
+  source_category: SourceCategory;
+  /** verified / site_only / unverified — never presented as more than it is. */
+  verification_status: string;
+  verification_note: string | null;
 }
 
 export const RADAR_STATUS_ORDER: RadarStatus[] = ["High", "Medium", "Low"];

@@ -1,23 +1,19 @@
 /**
  * Early Radar data service layer.
  *
- * There is no verified Early Radar data source connected yet, so these
- * functions return NOTHING rather than illustrative companies. All previous
- * example records (invented companies, hiring history, signals and
- * example.invalid careers URLs) have been removed so the page can never
- * present fabricated information as real.
- *
- * When real monitoring is added (career-page / ATS crawling via the existing
- * Firecrawl connector plus LLM relevance scoring, persisted in the database),
- * only the bodies of these functions change — the UI already reads through
- * them.
- *
- * Nothing here ever claims a vacancy will appear. Signals are evidence only.
+ * Stage 1: real vacancies only. Early Jobs and Target Companies are read from
+ * the database, populated exclusively by verified scans (recruiter job pages
+ * today, employer career pages later). Potential Opportunities stays empty
+ * until Stage 2 signal detection exists — no speculative records are invented.
  */
+import { supabase } from "@/integrations/supabase/client";
+import type { Country } from "@/types/job";
 import type {
   EarlyJob,
   PotentialOpportunity,
+  PotentialRoleCategory,
   RadarStatus,
+  SourceCategory,
   TargetCompany,
 } from "@/types/radar";
 
@@ -43,40 +39,112 @@ export function isRealPublicUrl(url: string | null | undefined): boolean {
 /** Sort helper: High first, then Medium, then Low. */
 const statusRank: Record<RadarStatus, number> = { High: 0, Medium: 1, Low: 2 };
 
-/** Real early vacancies found on company career pages / ATS. */
+function toStatus(value: string | null): RadarStatus {
+  return value === "High" || value === "Medium" ? value : "Low";
+}
+
+function toCategory(value: string | null): SourceCategory {
+  if (value === "Recruiter & Staffing" || value === "Recruiters & Staffing")
+    return "Recruiters & Staffing";
+  if (value === "Watchlist") return "Watchlist";
+  return "Target Employers";
+}
+
+function toRoleCategories(value: string | null): PotentialRoleCategory[] {
+  const known: PotentialRoleCategory[] = [
+    "Business Analyst",
+    "Business Process Analyst",
+    "Requirements Engineer",
+    "Functional Analyst",
+    "Technical Writer",
+    "Documentation / Knowledge",
+    "Knowledge Engineer",
+    "Digital Transformation Analyst",
+    "AI Business / Functional Analyst",
+    "Product / Technology Analyst",
+  ];
+  if (!value) return [];
+  const match = known.find((k) => k.toLowerCase() === value.toLowerCase());
+  return match ? [match] : [];
+}
+
+/** Real vacancies found through monitored sources (recruiter pages, career pages). */
 export async function getEarlyJobs(): Promise<EarlyJob[]> {
-  const jobs: EarlyJob[] = [];
-  return jobs
-    .filter((j) => !j.is_example && isRealPublicUrl(j.url))
-    .sort(
-      (a, b) =>
-        statusRank[a.relevance] - statusRank[b.relevance] ||
-        b.first_detected_at.localeCompare(a.first_detected_at),
-    );
+  const { data, error } = await supabase
+    .from("radar_vacancies")
+    .select("*")
+    .order("first_detected_at", { ascending: false });
+  if (error) throw error;
+
+  const jobs: EarlyJob[] = (data ?? [])
+    .filter((row) => isRealPublicUrl(row.url))
+    .map((row) => {
+      const extras = Array.isArray(row.extra_sources)
+        ? (row.extra_sources as { source?: string; url?: string }[])
+        : [];
+      return {
+        id: row.id,
+        company: row.client_company,
+        title: row.title,
+        city: row.city ?? "Switzerland",
+        country: row.country as Country,
+        source_category: toCategory(row.source_category),
+        employment_type: row.employment_type,
+        language_requirement: row.language_requirement,
+        relevance_score: row.relevance_score,
+        other_sources: extras
+          .filter((e) => typeof e.source === "string")
+          .map((e) => ({ source: e.source as string, ...(e.url ? { url: e.url } : {}) })),
+        first_detected_at: row.first_detected_at,
+        published_at: row.source_published_at,
+        source: row.source_name,
+        url: row.url,
+        relevance: toStatus(row.relevance),
+        relevance_reason: row.relevance_reason ?? "",
+        matched_skills: row.matched_skills ?? [],
+        potential_roles: toRoleCategories(row.role_category),
+        seen_on_linkedin_at: null,
+        lead_time_days: null,
+        is_example: false,
+      };
+    });
+
+  return jobs.sort(
+    (a, b) =>
+      statusRank[a.relevance] - statusRank[b.relevance] ||
+      b.first_detected_at.localeCompare(a.first_detected_at),
+  );
 }
 
-/** Real companies showing publicly observable hiring signals. */
+/** Stage 2 feature — deliberately empty until real signal detection exists. */
 export async function getPotentialOpportunities(): Promise<PotentialOpportunity[]> {
-  const opportunities: PotentialOpportunity[] = [];
-  return opportunities
-    .filter((o) => !o.is_example)
-    .sort(
-      (a, b) =>
-        statusRank[a.radar_status] - statusRank[b.radar_status] ||
-        b.detected_at.localeCompare(a.detected_at),
-    );
+  return [];
 }
 
-/** Real employers worth monitoring for this profile. */
+/** Monitored sources: employers, recruitment agencies and watchlist entries. */
 export async function getTargetCompanies(): Promise<TargetCompany[]> {
-  const companies: TargetCompany[] = [];
-  return companies
-    .filter((c) => !c.is_example)
-    .sort(
-      (a, b) =>
-        statusRank[a.radar_status] - statusRank[b.radar_status] ||
-        a.company.localeCompare(b.company),
-    );
+  const { data, error } = await supabase.from("radar_sources").select("*").order("name");
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    company: row.name,
+    country: row.country as Country,
+    industry:
+      toCategory(row.source_category) === "Recruiters & Staffing"
+        ? "Recruitment / staffing agency"
+        : "Employer",
+    role_categories: [],
+    previous_relevant_hiring: [],
+    current_signals: [],
+    radar_status: "Low" as RadarStatus,
+    last_checked_at: row.last_checked_at ?? row.created_at,
+    careers_url: row.jobs_url ?? row.site_url,
+    is_example: false,
+    source_category: toCategory(row.source_category),
+    verification_status: row.verification_status,
+    verification_note: row.verification_note,
+  }));
 }
 
 export const radarService = {
