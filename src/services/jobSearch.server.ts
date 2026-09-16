@@ -889,8 +889,12 @@ export async function runSearchEngine(options?: {
       continue;
     }
     for (const hit of outcome.results) {
-      if (!hit.url || seenUrls.has(hit.url)) continue;
-      seenUrls.add(hit.url);
+      // EARLY DEDUPLICATION — normalised, so the same advertisement discovered
+      // by several queries (or with tracking params) is only ever read once.
+      if (!hit.url) continue;
+      const key = normalizeVacancyUrl(hit.url);
+      if (seenUrls.has(key)) continue;
+      seenUrls.add(key);
       hits.push(hit);
     }
   }
