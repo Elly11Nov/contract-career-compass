@@ -193,6 +193,7 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
 
       let stored = 0;
       let duplicates = 0;
+      let closedKept = 0;
       for (const candidate of result.candidates) {
         const { data: same } = await supabase
           .from("radar_vacancies")
@@ -200,7 +201,12 @@ export const scanEmployerSources = createServerFn({ method: "POST" })
           .eq("dedupe_key", candidate.dedupe_key)
           .maybeSingle();
 
-        if (same) {
+        if (!candidate.is_open) {
+          // Closed/expired: never a current vacancy. Remove any stale current
+          // entry, but keep the advert as hiring-history evidence below.
+          if (same) await supabase.from("radar_vacancies").delete().eq("id", same.id);
+          closedKept += 1;
+        } else if (same) {
           await supabase
             .from("radar_vacancies")
             .update({ last_seen_at: new Date().toISOString() })
