@@ -80,6 +80,10 @@ export interface RadarCandidate {
   role_category: string | null;
   matched_skills: string[];
   verification_status: string;
+  /** True only when the source still presents the vacancy as open/active. */
+  is_open: boolean;
+  /** Closing/expiry date stated on the page, when there is one. */
+  closing_date: string | null;
 }
 
 export interface RadarScanDiagnostic {
