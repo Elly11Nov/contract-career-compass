@@ -241,9 +241,27 @@ function EarlyRadarPage() {
               </Button>
             ))}
           </div>
-          <Button size="sm" onClick={handleScan} disabled={scanning}>
-            {scanning ? "Checking agencies…" : "Scan recruiters"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={handleScan} disabled={scanning !== null}>
+              {scanning === "recruiters" ? "Checking agencies…" : "Scan recruiters"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleEmployerScan}
+              disabled={scanning !== null}
+            >
+              {scanning === "employers" ? "Checking employers…" : "Scan employers"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSignalScan}
+              disabled={scanning !== null}
+            >
+              {scanning === "signals" ? "Checking signals…" : "Check business signals"}
+            </Button>
+          </div>
         </div>
 
 
