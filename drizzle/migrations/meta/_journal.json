@@ -8,6 +8,13 @@
       "when": 1789543613961,
       "tag": "0000_create_radar_sources_and_vacancies",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789548498969,
+      "tag": "0001_create_radar_history_and_signals",
+      "breakpoints": true
     }
   ]
 }

@@ -98,6 +98,132 @@ export type Database = {
         }
         Relationships: []
       }
+      radar_hiring_history: {
+        Row: {
+          advertised_at: string | null
+          city: string | null
+          company: string
+          country: string
+          employment_type: string
+          first_detected_at: string
+          id: string
+          is_current: boolean
+          language_requirement: string
+          matched_skills: string[]
+          relevance: string
+          relevance_reason: string | null
+          relevance_score: number
+          role_category: string | null
+          source_category: string
+          source_name: string
+          title: string
+          url: string
+          url_key: string
+          verification_status: string
+        }
+        Insert: {
+          advertised_at?: string | null
+          city?: string | null
+          company: string
+          country?: string
+          employment_type?: string
+          first_detected_at?: string
+          id?: string
+          is_current?: boolean
+          language_requirement?: string
+          matched_skills?: string[]
+          relevance?: string
+          relevance_reason?: string | null
+          relevance_score?: number
+          role_category?: string | null
+          source_category?: string
+          source_name: string
+          title: string
+          url: string
+          url_key: string
+          verification_status?: string
+        }
+        Update: {
+          advertised_at?: string | null
+          city?: string | null
+          company?: string
+          country?: string
+          employment_type?: string
+          first_detected_at?: string
+          id?: string
+          is_current?: boolean
+          language_requirement?: string
+          matched_skills?: string[]
+          relevance?: string
+          relevance_reason?: string | null
+          relevance_score?: number
+          role_category?: string | null
+          source_category?: string
+          source_name?: string
+          title?: string
+          url?: string
+          url_key?: string
+          verification_status?: string
+        }
+        Relationships: []
+      }
+      radar_signals: {
+        Row: {
+          category: string
+          company: string
+          country: string
+          description: string
+          detected_at: string
+          evidence_source: string
+          id: string
+          matched_skills: string[]
+          potential_roles: string[]
+          published_at: string | null
+          radar_status: string
+          relevance_score: number
+          source_category: string
+          url: string
+          url_key: string
+          why_relevant: string | null
+        }
+        Insert: {
+          category?: string
+          company: string
+          country?: string
+          description: string
+          detected_at?: string
+          evidence_source: string
+          id?: string
+          matched_skills?: string[]
+          potential_roles?: string[]
+          published_at?: string | null
+          radar_status?: string
+          relevance_score?: number
+          source_category?: string
+          url: string
+          url_key: string
+          why_relevant?: string | null
+        }
+        Update: {
+          category?: string
+          company?: string
+          country?: string
+          description?: string
+          detected_at?: string
+          evidence_source?: string
+          id?: string
+          matched_skills?: string[]
+          potential_roles?: string[]
+          published_at?: string | null
+          radar_status?: string
+          relevance_score?: number
+          source_category?: string
+          url?: string
+          url_key?: string
+          why_relevant?: string | null
+        }
+        Relationships: []
+      }
       radar_sources: {
         Row: {
           country: string
