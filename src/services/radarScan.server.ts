@@ -564,3 +564,230 @@ export async function runRecruiterScan(options: {
 
   return result;
 }
+
+/** Employers use the same verified pipeline; only the prompt's employer rule differs. */
+export const runSourceScan = runRecruiterScan;
+
+/* ------------------------------------------------------------------ *
+ * Business & transformation signals
+ * ------------------------------------------------------------------ */
+
+export interface RadarSignalCandidate {
+  company: string;
+  source_category: string;
+  country: string;
+  category: string;
+  description: string;
+  evidence_source: string;
+  url: string;
+  url_key: string;
+  published_at: string | null;
+  radar_status: "High" | "Medium" | "Low";
+  relevance_score: number;
+  why_relevant: string;
+  potential_roles: string[];
+  matched_skills: string[];
+}
+
+export interface RadarSignalScanResult {
+  sources_scanned: string[];
+  examined: number;
+  qualified: number;
+  rejected: number;
+  signals: RadarSignalCandidate[];
+  diagnostics: RadarScanDiagnostic[];
+}
+
+const SIGNAL_SCHEMA = `{
+  "qualifies": boolean,
+  "rejection_reason": string,
+  "category": "Company growth" | "Technology change" | "Transformation" | "Organisation change" | "Hiring pattern",
+  "description": string,
+  "published_at": string,
+  "radar_status": "High" | "Medium" | "Low",
+  "relevance_score": number,
+  "why_relevant": string,
+  "potential_roles": string[],
+  "matched_skills": string[]
+}`;
+
+function signalPrompt(company: string, todayIso: string) {
+  return `You assess a public web page for evidence of business or technology activity at the Swiss
+company "${company}" that could later create work suited to the candidate profile below.
+Today is ${todayIso}.
+
+QUALIFY (qualifies=true) ONLY when the page contains concrete, checkable public evidence of:
+technology or digital transformation, an AI programme, a major technology project or platform,
+an acquisition, expansion, a new team or a major technology investment at this company.
+
+REJECT when the page is: generic marketing with no specific initiative, a vacancy advertisement,
+about a different company, undated speculation, or a press aggregation with no substance.
+
+RULES:
+- description: what the evidence actually says, in one or two factual sentences. Never speculate.
+- This is a SIGNAL TO MONITOR, never a prediction that a role will be advertised. why_relevant must
+  be phrased cautiously ("may", "could") and must reference the candidate profile.
+- published_at: the ISO date stated on the page, or "" when the page states none. Never guess.
+- relevance_score 0-100 on how plausibly this activity relates to the profile.
+  radar_status: "High" >=80, "Medium" 60-79, "Low" below 60.
+
+CANDIDATE PROFILE:
+${CANDIDATE_PROFILE}
+
+Reply with JSON only, matching exactly:
+${SIGNAL_SCHEMA}`;
+}
+
+const SIGNAL_TERMS = [
+  '"digital transformation"',
+  '"technology transformation"',
+  '"AI programme" OR "AI program" OR "artificial intelligence"',
+  '"new platform" OR "platform migration"',
+  '"acquisition" OR "acquires"',
+  '"expansion" OR "new team" OR "new hub"',
+];
+
+/**
+ * Reads public pages about a monitored company and keeps only signals backed by a
+ * page that actually opens. Nothing is inferred or invented.
+ */
+export async function runSignalScan(options: {
+  sources: RadarSourceInput[];
+  knownUrlKeys?: string[];
+  maxPerSource?: number;
+}): Promise<RadarSignalScanResult> {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const known = new Set(options.knownUrlKeys ?? []);
+  const maxPerSource = options.maxPerSource ?? 3;
+  const apiKey = process.env["LOVABLE_API_KEY"];
+  if (!apiKey) {
+    throw new SearchProviderNotConfiguredError(
+      "LOVABLE_API_KEY is missing on the server, so signals cannot be assessed.",
+    );
+  }
+
+  const result: RadarSignalScanResult = {
+    sources_scanned: [],
+    examined: 0,
+    qualified: 0,
+    rejected: 0,
+    signals: [],
+    diagnostics: [],
+  };
+  const seen = new Set<string>();
+
+  for (const source of options.sources) {
+    result.sources_scanned.push(source.name);
+    const hits: ProviderHit[] = [];
+    for (const term of SIGNAL_TERMS.slice(0, 3)) {
+      hits.push(...(await providerSearch(`"${source.name}" Switzerland ${term}`, 5)));
+      await sleep(600);
+    }
+
+    let accepted = 0;
+    for (const hit of hits) {
+      if (accepted >= maxPerSource) break;
+      const key = normalizeVacancyUrl(hit.url);
+      if (seen.has(key) || known.has(key)) continue;
+      seen.add(key);
+
+      result.examined += 1;
+      const content = hit.markdown ?? (await scrapeAdvertisement(hit.url, hit.markdown));
+      if (!content) {
+        result.rejected += 1;
+        result.diagnostics.push({
+          source: source.name,
+          url: hit.url,
+          title: hit.title ?? "",
+          reason: "page_not_openable",
+        });
+        continue;
+      }
+
+      const res = await fetchWithTimeout(
+        AI_GATEWAY,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: AI_MODEL,
+            messages: [
+              { role: "system", content: signalPrompt(source.name, todayIso) },
+              {
+                role: "user",
+                content: `URL: ${hit.url}\nPage title: ${hit.title ?? "unknown"}\n\nPAGE:\n${content.slice(0, 14_000)}`,
+              },
+            ],
+          }),
+        },
+        60_000,
+      );
+      if (!res.ok) {
+        result.rejected += 1;
+        result.diagnostics.push({
+          source: source.name,
+          url: hit.url,
+          title: hit.title ?? "",
+          reason: "scoring_failed",
+          detail: `AI gateway ${res.status}`,
+        });
+        continue;
+      }
+      const payload = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+      const parsed = parseJsonReply(payload.choices?.[0]?.message?.content ?? "");
+      if (!parsed || parsed["qualifies"] !== true) {
+        result.rejected += 1;
+        result.diagnostics.push({
+          source: source.name,
+          url: hit.url,
+          title: hit.title ?? "",
+          reason: parsed ? str(parsed["rejection_reason"], "no_evidence") : "extraction_failed",
+        });
+        continue;
+      }
+
+      const description = str(parsed["description"]);
+      if (!description) {
+        result.rejected += 1;
+        continue;
+      }
+      const publishedRaw = str(parsed["published_at"]);
+      const score = Math.max(0, Math.min(100, Number(parsed["relevance_score"]) || 0));
+      const statusRaw = str(parsed["radar_status"], "Low");
+      const status =
+        statusRaw === "High" || statusRaw === "Medium" || statusRaw === "Low"
+          ? statusRaw
+          : score >= 80
+            ? "High"
+            : score >= 60
+              ? "Medium"
+              : "Low";
+
+      result.signals.push({
+        company: source.name,
+        source_category: source.source_category,
+        country: "Switzerland",
+        category: str(parsed["category"], "Technology change"),
+        description,
+        evidence_source: hostOf(hit.url) ?? "public web page",
+        url: hit.url,
+        url_key: key,
+        published_at:
+          publishedRaw && !Number.isNaN(Date.parse(publishedRaw)) ? publishedRaw : null,
+        radar_status: status,
+        relevance_score: score,
+        why_relevant: str(parsed["why_relevant"]),
+        potential_roles: Array.isArray(parsed["potential_roles"])
+          ? (parsed["potential_roles"] as unknown[]).map(String).slice(0, 6)
+          : [],
+        matched_skills: Array.isArray(parsed["matched_skills"])
+          ? (parsed["matched_skills"] as unknown[]).map(String).slice(0, 12)
+          : [],
+      });
+      result.qualified += 1;
+      accepted += 1;
+    }
+  }
+
+  return result;
+}
