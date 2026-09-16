@@ -925,16 +925,40 @@ export async function runSearchEngine(options?: {
   // Vacancies already stored are skipped before any page fetch or AI call:
   // re-analysing them costs credits and can never produce a new job.
   const knownUrls = new Set((options?.knownUrls ?? []).map(normalizeVacancyUrl));
+  // In-run guard: one paid read per normalised URL, whatever happens upstream.
+  const paidReads = new Set<string>();
 
   const outcomes = await mapWithConcurrency(hits, 6, async (hit): Promise<HitOutcome> => {
-    if (knownUrls.has(normalizeVacancyUrl(hit.url))) {
+    const urlKey = normalizeVacancyUrl(hit.url);
+    if (knownUrls.has(urlKey)) {
       return { diagnostic: toDiagnostic(hit, "already_known") };
     }
     if (!isPlausibleVacancyUrl(hit.url)) {
       return { diagnostic: toDiagnostic(hit, "not_a_vacancy_url") };
     }
+    // FREE screening on discovery metadata only — no credits spent yet.
+    const screened = screenHit(hit);
+    if (!screened.keep) {
+      return { diagnostic: toDiagnostic(hit, "not_a_vacancy_url", undefined, screened.detail) };
+    }
+    if (paidReads.has(urlKey)) {
+      return { diagnostic: toDiagnostic(hit, "already_known", undefined, "duplicate within run") };
+    }
+    paidReads.add(urlKey);
     // The advertisement must actually be openable before anything is considered.
     const content = await scrapeAdvertisement(hit.url, hit.markdown);
+    if (content === DOCUMENT_TOO_LARGE) {
+      // Not a permanent rejection: the URL is preserved in diagnostics so it can
+      // be inspected manually or handled by a future dedicated path.
+      return {
+        diagnostic: toDiagnostic(
+          hit,
+          "other",
+          undefined,
+          "document too large for automatic processing — not read, URL preserved for manual inspection",
+        ),
+      };
+    }
     if (!content) {
       return { diagnostic: toDiagnostic(hit, "page_not_openable") };
     }
