@@ -10,7 +10,8 @@ export type Country =
   | "Czechia"
   | "Hungary"
   | "Poland"
-  | "Romania";
+  | "Romania"
+  | "Spain";
 
 export type RoleCategory = "Technical Writer" | "Business Analyst" | "Related";
 
@@ -138,6 +139,7 @@ export const COUNTRIES: Country[] = [
   "Hungary",
   "Poland",
   "Romania",
+  "Spain",
 ];
 
 export const WORK_MODELS: WorkModel[] = ["Remote", "Hybrid", "Onsite"];
