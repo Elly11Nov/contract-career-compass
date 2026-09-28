@@ -163,6 +163,7 @@ const COUNTRY_CODES: Record<string, string> = {
   Hungary: "HU",
   Poland: "PL",
   Romania: "RO",
+  Spain: "ES",
 };
 
 export type BuiltQuery = { query: string; country: string };

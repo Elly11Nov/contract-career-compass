@@ -76,6 +76,7 @@ export const SEARCH_COUNTRIES: Country[] = [
   "Hungary",
   "Poland",
   "Romania",
+  "Spain",
 ];
 
 /**
@@ -88,6 +89,7 @@ export const CONTRACT_ONLY_COUNTRIES: Country[] = [
   "Hungary",
   "Poland",
   "Romania",
+  "Spain",
 ];
 
 /**
@@ -175,6 +177,14 @@ export const SEARCH_SITES: Record<Country, string[]> = {
   Hungary: ["profession.hu", "hu.indeed.com", "hays.hu", "cvonline.hu", "linkedin.com/jobs"],
   Poland: ["nofluffjobs.com", "justjoin.it", "pracuj.pl", "hays.pl", "linkedin.com/jobs"],
   Romania: ["ejobs.ro", "bestjobs.eu", "hipo.ro", "ro.indeed.com", "linkedin.com/jobs"],
+  Spain: [
+    "infojobs.net",
+    "es.indeed.com",
+    "hays.es",
+    "experis.es",
+    "malt.es",
+    "linkedin.com/jobs",
+  ],
 };
 
 export const SEARCH_CRITERIA = {
