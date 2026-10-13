@@ -208,3 +208,19 @@ Strong expertise in DITA/XML, docs-as-code and API documentation (Swagger/OpenAP
 Strong English (native-level working language); working knowledge of German (German must never be required).
 Target roles: Technical Writer, Lead Technical Writer, Documentation Specialist, Business Analyst, Requirements Engineer.
 `.trim();
+
+/**
+ * Strict title gate: only the user's target role families are kept.
+ */
+const TARGET_TITLE_PATTERNS: RegExp[] = [
+  /technical\s+(writer|author)/i,
+  /documentation\s+(specialist|engineer|lead|manager|writer|consultant)/i,
+  /technische[rn]?\s+redakt/i,
+  /r[ée]dacteur\s+technique/i,
+  /business\s+(systems\s+)?analyst/i,
+  /requirements?\s+(engineer|engineering|analyst|specialist)/i,
+];
+
+export function isTargetRoleTitle(title: string): boolean {
+  return TARGET_TITLE_PATTERNS.some((p) => p.test(title));
+}
