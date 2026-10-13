@@ -73,7 +73,7 @@ export function filterJobs(jobs: Job[], filters: JobFilters, query: string): Job
 }
 
 export function isPermittedContract(job: Job): boolean {
-  if (job.contract_type === "Permanent") return false;
+  if (job.contract_type === "Permanent" && job.country !== "Switzerland") return false;
   if (!isTargetRoleTitle(job.title)) return false;
   return !isPaywalledUrl(job.url);
 }
