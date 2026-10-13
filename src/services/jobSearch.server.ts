@@ -20,8 +20,7 @@ import {
   CONTRACT_ONLY_COUNTRIES,
   isPaywalledUrl,
   SEARCH_SITES,
-  TECHNICAL_WRITING_TITLES,
-} from "./searchCriteria";
+  TECHNICAL_WRITING_TITLES, isTargetRoleTitle } from "./searchCriteria";
 import type { CandidateJob, SearchEngineResult } from "./jobSearch.types";
 import type { CandidateDiagnostic, RejectionReason, RoleFamily } from "./jobSearch.types";
 
@@ -95,8 +94,8 @@ function hardCriteriaReason(job: CandidateJob): RejectionReason | null {
   if (!isPlausibleVacancyUrl(job.url)) return "not_a_vacancy_url";
   if (!SEARCH_COUNTRIES.includes(job.country)) return "country_out_of_scope";
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return "permanent_role";
-  if (CONTRACT_ONLY_COUNTRIES.includes(job.country) && job.contract_type === "Permanent")
-    return "permanent_role";
+  if (job.contract_type === "Permanent") return "permanent_role";
+  if (!isTargetRoleTitle(job.title)) return "role_not_relevant";
   const published = Date.parse(job.publication_date);
   if (Number.isNaN(published)) return "publication_date_out_of_range";
   const ageDays = (Date.now() - published) / 86_400_000;
@@ -660,7 +659,7 @@ function buildPrompt(todayIso: string) {
 
 CONTRACT TYPE RULE — apply before any other judgement:
 - For contract-only countries (${CONTRACT_ONLY_COUNTRIES.join(", ")}), PERMANENT employment (unbefristet / Festanstellung / CDI / tillsvidare / indefinite) is NEVER in scope. Reject these vacancies immediately, regardless of title or match.
-- For all other countries (${SEARCH_COUNTRIES.filter((c) => !CONTRACT_ONLY_COUNTRIES.includes(c)).join(", ")}), permanent employment IS accepted and should be classified as contract_type "Permanent". Contract/freelance/interim/fixed-term work is still preferred.
+- For all other countries (${SEARCH_COUNTRIES.filter((c) => !CONTRACT_ONLY_COUNTRIES.includes(c)).join(", ")}), permanent employment must still be classified as contract_type "Permanent" (it will be rejected — only contract/freelance/interim/fixed-term work is wanted).
 
 REJECT (qualifies=false) a vacancy when ANY of the following is true:
 - the country is not one of ${SEARCH_COUNTRIES.join(", ")}
