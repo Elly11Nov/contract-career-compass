@@ -199,12 +199,26 @@ export const SEARCH_CRITERIA = {
 /** Candidate profile the scoring engine matches vacancies against. */
 export const CANDIDATE_PROFILE = `
 Requirements Engineer and Technical Documentation Specialist bridging business and engineering stakeholders across pharma, finance and SaaS.
-CPRE-certified (IREB, 2025).
-Proven track record eliciting and structuring requirements; traceability from stakeholder needs to specifications; change-control artefacts.
-Requirements definition, workflow modelling, AI-assisted workflow automation.
-Translating complex technical environments into scalable documentation.
-Strong expertise in DITA/XML, docs-as-code and API documentation (Swagger/OpenAPI, Postman); Git, Confluence, Jira, Agile; SQL.
-16+ years senior Technical Writing experience in enterprise software.
+CPRE-certified (IREB, 2025); 16+ years senior Technical Writing experience in enterprise software.
+
+Core experience — Requirements Engineering and Change Management:
+- Requirements elicitation, analysis and traceability (CPRE FL, IREB).
+- Traceability mechanisms: requirement IDs, linking/traceability matrices, linking stakeholder needs to specifications via Jira artefacts.
+- Gap analysis and as-is/to-be process mapping.
+- Change control and SOP development in regulated environments.
+- Stakeholder alignment across engineering, product, QA and regulatory.
+- Jira/Confluence-based epic and requirements development.
+- Agile/Scrum requirements lifecycle management.
+
+Core experience — Technical Documentation and Content Architecture:
+- DITA/XML structured authoring and single-sourcing.
+- Docs-as-code toolchain: Git, Markdown, AsciiDoc, Jenkins, Jekyll.
+- Docs-as-code governance: PR review, versioning/releases; lifecycle states draft/review/released.
+- API/SDK documentation: REST, Swagger/OpenAPI, JSON.
+- CMS authoring environments: Vasont, MadCap Flare, XMetaL, FrameMaker.
+- Content governance and knowledge-base architecture.
+
+Additional context: requirements definition, workflow modelling, AI-assisted workflow automation; translating complex technical environments into scalable documentation; SQL; Postman.
 Strong English (native-level working language); working knowledge of German (German must never be required).
 Target roles: Technical Writer, Lead Technical Writer, Documentation Specialist, Business Analyst, Requirements Engineer.
 `.trim();
