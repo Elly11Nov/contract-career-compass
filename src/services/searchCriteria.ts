@@ -208,3 +208,21 @@ Strong English (native-level working language); working knowledge of German.
 Business Analyst and Requirements Engineering roles should be assessed for transferable fit
 (requirements elicitation, specification writing, stakeholder work, systems analysis).
 `.trim();
+
+/**
+ * Strict title gate: only the user's target role families are kept.
+ * Technical Writer / Lead Technical Writer, Documentation Specialist,
+ * Business Analyst, Requirements Engineer.
+ */
+const TARGET_TITLE_PATTERNS: RegExp[] = [
+  /technical\s+(writer|author)/i,
+  /documentation\s+(specialist|engineer|lead|manager|writer|consultant)/i,
+  /technische[rn]?\s+redakt/i,
+  /r[ée]dacteur\s+technique/i,
+  /business\s+(systems\s+)?analyst/i,
+  /requirements?\s+(engineer|engineering|analyst|specialist)/i,
+];
+
+export function isTargetRoleTitle(title: string): boolean {
+  return TARGET_TITLE_PATTERNS.some((p) => p.test(title));
+}

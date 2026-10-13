@@ -1,7 +1,6 @@
-import { CONTRACT_ONLY_COUNTRIES, isPaywalledUrl } from "@/services/searchCriteria";
-import type { Country, Job, JobFilters } from "@/types/job";
+import { isPaywalledUrl, isTargetRoleTitle } from "@/services/searchCriteria";
+import type { Job, JobFilters } from "@/types/job";
 
-const CONTRACT_ONLY_SET = new Set<Country>(CONTRACT_ONLY_COUNTRIES);
 
 
 /** Central European Time (handles CET/CEST automatically). */
@@ -74,7 +73,8 @@ export function filterJobs(jobs: Job[], filters: JobFilters, query: string): Job
 }
 
 export function isPermittedContract(job: Job): boolean {
-  if (job.contract_type === "Permanent" && CONTRACT_ONLY_SET.has(job.country)) return false;
+  if (job.contract_type === "Permanent") return false;
+  if (!isTargetRoleTitle(job.title)) return false;
   return !isPaywalledUrl(job.url);
 }
 
