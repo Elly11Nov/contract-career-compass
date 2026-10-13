@@ -198,31 +198,13 @@ export const SEARCH_CRITERIA = {
 
 /** Candidate profile the scoring engine matches vacancies against. */
 export const CANDIDATE_PROFILE = `
-16+ years senior Technical Writing experience.
-Enterprise software documentation; API documentation.
-DITA/XML; docs-as-code; Git; Confluence; Jira; Agile; CI/CD exposure.
-Swagger/OpenAPI; Postman; SQL and database knowledge.
-Requirements Engineering and requirements documentation.
-Software engineering environments; AI-assisted documentation.
-Strong English (native-level working language); working knowledge of German.
-Business Analyst and Requirements Engineering roles should be assessed for transferable fit
-(requirements elicitation, specification writing, stakeholder work, systems analysis).
+Requirements Engineer and Technical Documentation Specialist bridging business and engineering stakeholders across pharma, finance and SaaS.
+CPRE-certified (IREB, 2025).
+Proven track record eliciting and structuring requirements; traceability from stakeholder needs to specifications; change-control artefacts.
+Requirements definition, workflow modelling, AI-assisted workflow automation.
+Translating complex technical environments into scalable documentation.
+Strong expertise in DITA/XML, docs-as-code and API documentation (Swagger/OpenAPI, Postman); Git, Confluence, Jira, Agile; SQL.
+16+ years senior Technical Writing experience in enterprise software.
+Strong English (native-level working language); working knowledge of German (German must never be required).
+Target roles: Technical Writer, Lead Technical Writer, Documentation Specialist, Business Analyst, Requirements Engineer.
 `.trim();
-
-/**
- * Strict title gate: only the user's target role families are kept.
- * Technical Writer / Lead Technical Writer, Documentation Specialist,
- * Business Analyst, Requirements Engineer.
- */
-const TARGET_TITLE_PATTERNS: RegExp[] = [
-  /technical\s+(writer|author)/i,
-  /documentation\s+(specialist|engineer|lead|manager|writer|consultant)/i,
-  /technische[rn]?\s+redakt/i,
-  /r[ée]dacteur\s+technique/i,
-  /business\s+(systems\s+)?analyst/i,
-  /requirements?\s+(engineer|engineering|analyst|specialist)/i,
-];
-
-export function isTargetRoleTitle(title: string): boolean {
-  return TARGET_TITLE_PATTERNS.some((p) => p.test(title));
-}

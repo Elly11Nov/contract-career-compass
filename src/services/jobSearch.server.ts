@@ -94,7 +94,7 @@ function hardCriteriaReason(job: CandidateJob): RejectionReason | null {
   if (!isPlausibleVacancyUrl(job.url)) return "not_a_vacancy_url";
   if (!SEARCH_COUNTRIES.includes(job.country)) return "country_out_of_scope";
   if (!SEARCH_CONTRACT_TYPES.includes(job.contract_type)) return "permanent_role";
-  if (job.contract_type === "Permanent") return "permanent_role";
+  if (job.contract_type === "Permanent" && job.country !== "Switzerland") return "permanent_role";
   if (!isTargetRoleTitle(job.title)) return "role_not_relevant";
   const published = Date.parse(job.publication_date);
   if (Number.isNaN(published)) return "publication_date_out_of_range";
@@ -659,7 +659,7 @@ function buildPrompt(todayIso: string) {
 
 CONTRACT TYPE RULE — apply before any other judgement:
 - For contract-only countries (${CONTRACT_ONLY_COUNTRIES.join(", ")}), PERMANENT employment (unbefristet / Festanstellung / CDI / tillsvidare / indefinite) is NEVER in scope. Reject these vacancies immediately, regardless of title or match.
-- For all other countries (${SEARCH_COUNTRIES.filter((c) => !CONTRACT_ONLY_COUNTRIES.includes(c)).join(", ")}), permanent employment must still be classified as contract_type "Permanent" (it will be rejected — only contract/freelance/interim/fixed-term work is wanted).
+- For all other countries (${SEARCH_COUNTRIES.filter((c) => !CONTRACT_ONLY_COUNTRIES.includes(c)).join(", ")}), permanent employment must be classified as contract_type "Permanent". Permanent roles are accepted ONLY in Switzerland; everywhere else only contract/freelance/interim/fixed-term work is wanted.
 
 REJECT (qualifies=false) a vacancy when ANY of the following is true:
 - the country is not one of ${SEARCH_COUNTRIES.join(", ")}
