@@ -672,6 +672,24 @@ REJECT (qualifies=false) a vacancy when ANY of the following is true:
 SCORING (0-100) against this candidate profile:
 ${CANDIDATE_PROFILE}
 
+PROFILE COVERAGE RULE — partial overlap is expected and normal:
+- The candidate does NOT need every skill listed above. A vacancy qualifies when the
+  advertised work genuinely involves AT LEAST ONE of the candidate's core areas:
+  (a) requirements engineering (elicitation, traceability, change management, Jira/Confluence),
+  (b) business analysis (process mapping, stakeholder alignment, gap analysis),
+  (c) technical documentation / content architecture (DITA, docs-as-code, API/SDK docs, CMS).
+  A pure requirements-engineering role without DITA, or a documentation role without
+  regulated-environment change control, is still a full match for its area.
+- Score higher when more areas and more stated requirements overlap, but never reject
+  or score below 60 merely because profile skills from other areas are absent — that is
+  not a gap, the vacancy simply does not require them.
+
+DOMAIN RULE — engineering work is never in scope:
+- Roles whose actual work is software/systems engineering, avionics or embedded systems
+  (e.g. "Systems Engineer", "Avionics Architect", "Software Developer"), testing/QA,
+  security, data analysis or business development do NOT qualify, even when their
+  description mentions documentation, requirements artefacts or stakeholder contact.
+
 Weigh MANDATORY requirements far more heavily than nice-to-haves. Do not keyword match:
 judge whether the candidate genuinely satisfies each stated requirement, and treat
 Business Analyst / Requirements Engineering roles as transferable fit.
