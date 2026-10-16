@@ -108,7 +108,7 @@ function hardCriteriaReason(job: CandidateJob): RejectionReason | null {
 const FIRECRAWL_DIRECT = "https://api.firecrawl.dev/v2";
 const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const AI_MODEL = "google/gemini-2.5-flash";
+const AI_MODEL = "google/gemini-3.8-flash";
 
 export class SearchProviderNotConfiguredError extends Error {
   constructor(message: string) {
