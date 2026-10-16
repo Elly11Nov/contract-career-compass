@@ -24,7 +24,7 @@ import {
 const FIRECRAWL_DIRECT = "https://api.firecrawl.dev/v2";
 const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const AI_MODEL = "google/gemini-2.5-flash";
+const AI_MODEL = "google/gemini-3.8-flash";
 
 /** Swiss locations we prioritise, plus nationwide/remote coverage. */
 export const PRIORITY_LOCATIONS = [
