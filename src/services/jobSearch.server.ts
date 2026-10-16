@@ -971,6 +971,29 @@ export async function runSearchEngine(options?: {
       return { diagnostic: toDiagnostic(hit, "already_known", undefined, "duplicate within run") };
     }
     paidReads.add(urlKey);
+    try {
+      return await processHit(hit);
+    } catch (error) {
+      // Credit/configuration problems must stop the run; any other one-off failure
+      // (network drop, slow page) only skips this advertisement.
+      if (
+        error instanceof SearchProviderNotConfiguredError ||
+        (error instanceof Error && error.message.startsWith("AI verification unavailable"))
+      ) {
+        throw error;
+      }
+      return {
+        diagnostic: toDiagnostic(
+          hit,
+          "other",
+          undefined,
+          `check failed, skipped: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      };
+    }
+  });
+
+  async function processHit(hit: ProviderHit): Promise<HitOutcome> {
     // The advertisement must actually be openable before anything is considered.
     const content = await scrapeAdvertisement(hit.url, hit.markdown);
     if (content === DOCUMENT_TOO_LARGE) {
@@ -1011,7 +1034,7 @@ export async function runSearchEngine(options?: {
       job: candidate,
       diagnostic: toDiagnostic(hit, "qualified", candidate.title),
     };
-  });
+  }
 
   const jobs: CandidateJob[] = [];
   const byKey = new Set<string>();
