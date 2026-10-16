@@ -728,9 +728,11 @@ async function extractAndScore(
     );
   }
 
-  const res = await fetchWithTimeout(
-    AI_GATEWAY,
-    {
+  // No artificial deadline on AI calls: the model may need longer than a fixed
+  // timer, and aborting discards work that is still billed.
+  let res: Response;
+  try {
+    res = await fetch(AI_GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -743,9 +745,15 @@ async function extractAndScore(
           },
         ],
       }),
-    },
-    90_000,
-  );
+    });
+  } catch (error) {
+    // A network failure on one advertisement must not fail the whole search.
+    return {
+      candidate: null,
+      reason: "extraction_failed",
+      detail: `AI request failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 
   if (!res.ok) {
     const text = await res.text();
@@ -963,6 +971,29 @@ export async function runSearchEngine(options?: {
       return { diagnostic: toDiagnostic(hit, "already_known", undefined, "duplicate within run") };
     }
     paidReads.add(urlKey);
+    try {
+      return await processHit(hit);
+    } catch (error) {
+      // Credit/configuration problems must stop the run; any other one-off failure
+      // (network drop, slow page) only skips this advertisement.
+      if (
+        error instanceof SearchProviderNotConfiguredError ||
+        (error instanceof Error && error.message.startsWith("AI verification unavailable"))
+      ) {
+        throw error;
+      }
+      return {
+        diagnostic: toDiagnostic(
+          hit,
+          "other",
+          undefined,
+          `check failed, skipped: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      };
+    }
+  });
+
+  async function processHit(hit: ProviderHit): Promise<HitOutcome> {
     // The advertisement must actually be openable before anything is considered.
     const content = await scrapeAdvertisement(hit.url, hit.markdown);
     if (content === DOCUMENT_TOO_LARGE) {
@@ -1003,7 +1034,7 @@ export async function runSearchEngine(options?: {
       job: candidate,
       diagnostic: toDiagnostic(hit, "qualified", candidate.title),
     };
-  });
+  }
 
   const jobs: CandidateJob[] = [];
   const byKey = new Set<string>();

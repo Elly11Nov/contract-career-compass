@@ -530,7 +530,7 @@ async function scoreAdvertisement(
     );
   }
 
-  const res = await fetchWithTimeout(
+  const res = await fetch(
     AI_GATEWAY,
     {
       method: "POST",
@@ -553,7 +553,6 @@ async function scoreAdvertisement(
         ],
       }),
     },
-    60_000,
   );
   if (!res.ok) {
     return { candidate: null, reason: "scoring_failed", detail: `AI gateway ${res.status}` };
@@ -929,7 +928,7 @@ export async function runSignalScan(options: {
         continue;
       }
 
-      const res = await fetchWithTimeout(
+      const res = await fetch(
         AI_GATEWAY,
         {
           method: "POST",
@@ -945,7 +944,6 @@ export async function runSignalScan(options: {
             ],
           }),
         },
-        60_000,
       );
       if (!res.ok) {
         result.rejected += 1;
