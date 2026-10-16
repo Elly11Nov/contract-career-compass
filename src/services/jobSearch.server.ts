@@ -728,9 +728,11 @@ async function extractAndScore(
     );
   }
 
-  const res = await fetchWithTimeout(
-    AI_GATEWAY,
-    {
+  // No artificial deadline on AI calls: the model may need longer than a fixed
+  // timer, and aborting discards work that is still billed.
+  let res: Response;
+  try {
+    res = await fetch(AI_GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -743,9 +745,15 @@ async function extractAndScore(
           },
         ],
       }),
-    },
-    90_000,
-  );
+    });
+  } catch (error) {
+    // A network failure on one advertisement must not fail the whole search.
+    return {
+      candidate: null,
+      reason: "extraction_failed",
+      detail: `AI request failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 
   if (!res.ok) {
     const text = await res.text();
