@@ -38,6 +38,8 @@ export const Route = createFileRoute("/_authenticated/")({
         content:
           "Scored, filtered contract vacancies for technical writing and business analysis roles across the Nordics, Germany and France.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Dashboard,
