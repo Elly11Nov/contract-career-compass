@@ -11,16 +11,17 @@
  * the service layer (jobSearchService -> jobService) performs all persistence.
  */
 import {
-  BUSINESS_ANALYSIS_TITLES,
   CANDIDATE_PROFILE,
   MAX_AGE_DAYS,
-  PRIORITY_TITLES,
   SEARCH_CONTRACT_TYPES,
   SEARCH_COUNTRIES,
   CONTRACT_ONLY_COUNTRIES,
   isPaywalledUrl,
-  SEARCH_SITES,
-  TECHNICAL_WRITING_TITLES, isTargetRoleTitle } from "./searchCriteria";
+  isTargetRoleTitle } from "./searchCriteria";
+import { buildQueries, DEFAULT_MAX_QUERIES, DEFAULT_RESULTS_PER_QUERY, type BuiltQuery } from "./jobDiscovery";
+import { isSameVacancy, normalizeVacancyUrl } from "./jobIdentity";
+export { buildQueries } from "./jobDiscovery";
+export { normalizeVacancyUrl } from "./jobIdentity";
 import type { CandidateJob, SearchEngineResult } from "./jobSearch.types";
 import type { CandidateDiagnostic, RejectionReason, RoleFamily } from "./jobSearch.types";
 
@@ -164,80 +165,6 @@ const COUNTRY_CODES: Record<string, string> = {
   Romania: "RO",
   Spain: "ES",
 };
-
-export type BuiltQuery = { query: string; country: string };
-
-/** Build the provider queries from the configured criteria. */
-export function buildQueries(): BuiltQuery[] {
-  // Short, precise queries: long OR-chains dilute the ranking and return
-  // unrelated aggregator pages. Geo-targeting is handled by the provider
-  // `location` option instead of stuffing the country into the query.
-  const contractWords = (country: string) =>
-    CONTRACT_ONLY_COUNTRIES.includes(country as (typeof CONTRACT_ONLY_COUNTRIES)[number])
-      ? "contract OR freelance OR interim"
-      : "contract OR freelance OR interim OR permanent";
-
-  // Only target vacancies published within the MAX_AGE_DAYS window. The
-  // `after:` operator tells the search index to drop older pages before they
-  // cost us an open/extract; the code-side hard gate still double-checks the
-  // parsed publication date of every candidate.
-  const afterDate = new Date(Date.now() - MAX_AGE_DAYS * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-
-  const open = (title: string, country: string) => ({
-    query: `"${title}" job vacancy ${country} (${contractWords(country)}) after:${afterDate}`,
-    country,
-  });
-  const board = (title: string, country: string): BuiltQuery | null => {
-    const sites = SEARCH_SITES[country as keyof typeof SEARCH_SITES] ?? [];
-    if (sites.length === 0) return null;
-    const siteFilter = sites.map((s) => `site:${s}`).join(" OR ");
-    return { query: `"${title}" (${siteFilter}) after:${afterDate}`, country };
-  };
-
-  // Priority vocabulary: guaranteed coverage for every country on every run,
-  // ordered country-round-robin so a truncated budget never starves a country.
-  const priorityQueries: BuiltQuery[] = [];
-  for (const title of PRIORITY_TITLES) {
-    for (const country of SEARCH_COUNTRIES) priorityQueries.push(open(title, country));
-  }
-  for (const country of SEARCH_COUNTRIES) {
-    const q = board(PRIORITY_TITLES[0]!, country);
-    if (q) priorityQueries.push(q);
-  }
-
-  // Interleave the two role families so any truncated slice of the query list
-  // still covers documentation AND requirements/analysis vocabulary.
-  const titles: string[] = [];
-  const maxLen = Math.max(TECHNICAL_WRITING_TITLES.length, BUSINESS_ANALYSIS_TITLES.length);
-  for (let i = 0; i < maxLen; i += 1) {
-    if (TECHNICAL_WRITING_TITLES[i]) titles.push(TECHNICAL_WRITING_TITLES[i]!);
-    if (BUSINESS_ANALYSIS_TITLES[i]) titles.push(BUSINESS_ANALYSIS_TITLES[i]!);
-  }
-  // Rotate countries per title so a truncated slice also spans all countries.
-  const openQueries: BuiltQuery[] = [];
-  const siteQueries: BuiltQuery[] = [];
-  for (let pass = 0; pass < SEARCH_COUNTRIES.length; pass += 1) {
-    titles.forEach((title, index) => {
-      const country = SEARCH_COUNTRIES[(index + pass) % SEARCH_COUNTRIES.length]!;
-      openQueries.push(open(title, country));
-      const q = board(title, country);
-      if (q) siteQueries.push(q);
-    });
-  }
-  // Interleave so any truncated slice still hits both open web and boards.
-  const queries: BuiltQuery[] = [];
-  const longest = Math.max(openQueries.length, siteQueries.length);
-  for (let i = 0; i < longest; i += 1) {
-    if (openQueries[i]) queries.push(openQueries[i]!);
-    if (siteQueries[i]) queries.push(siteQueries[i]!);
-  }
-  return [...priorityQueries, ...queries];
-}
-
-
-
 
 type ProviderHit = { url: string; title?: string; description?: string; markdown?: string };
 
@@ -847,46 +774,15 @@ export function passesHardCriteria(job: CandidateJob): boolean {
   return true;
 }
 
-function dedupeKey(job: CandidateJob) {
-  return `${job.company}|${job.title}|${job.city}|${job.country}`.toLowerCase().trim();
-}
-
-/**
- * Full engine pass: search -> open advertisement -> verify -> score.
- * Returns verified, scored, de-duplicated candidate records (never persisted here).
- */
-/** Stable key used to recognise a vacancy URL that is already stored. */
-/** Query keys that never identify a specific vacancy (tracking / analytics only). */
-const TRACKING_PARAMS = /^(utm_|gclid|fbclid|mc_cid|mc_eid|_ga|trk|trackingid|src|source|campaign)/i;
-
-export function normalizeVacancyUrl(rawUrl: string): string {
-  try {
-    const parsed = new URL(rawUrl);
-    const base = `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname.replace(/\/$/, "")}`;
-    // Many career sites identify the vacancy in the query string
-    // (e.g. detail.php?refCode=RU0R87). Dropping it would merge every
-    // vacancy on that site into a single key.
-    const params = [...parsed.searchParams.entries()]
-      .filter(([key, value]) => value !== "" && !TRACKING_PARAMS.test(key))
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`);
-    const suffix = params.length ? `?${params.join("&")}` : "";
-    return `${base}${suffix}`.toLowerCase();
-  } catch {
-    return rawUrl.toLowerCase();
-  }
-}
-
 export async function runSearchEngine(options?: {
   maxQueries?: number;
   resultsPerQuery?: number;
   knownUrls?: string[];
 }): Promise<SearchEngineResult> {
-  // Must be >= the number of priority queries (2 titles x 11 countries + 11 site
-  // queries = 33) so every country, including the contract-only ones, is searched.
-  const maxQueries = options?.maxQueries ?? 40;
+  // Same budget; the first 26 queries now cover both families in all 13 countries.
+  const maxQueries = options?.maxQueries ?? DEFAULT_MAX_QUERIES;
 
-  const resultsPerQuery = options?.resultsPerQuery ?? 5;
+  const resultsPerQuery = options?.resultsPerQuery ?? DEFAULT_RESULTS_PER_QUERY;
   const todayIso = new Date().toISOString().slice(0, 10);
 
   const queries = buildQueries().slice(0, maxQueries);
@@ -1037,7 +933,6 @@ export async function runSearchEngine(options?: {
   }
 
   const jobs: CandidateJob[] = [];
-  const byKey = new Set<string>();
   const diagnostics: CandidateDiagnostic[] = [];
   let rejected = 0;
 
@@ -1050,11 +945,10 @@ export async function runSearchEngine(options?: {
       )
         rejected += 1;
     }
-    if (!outcome.job) continue;
-    const key = dedupeKey(outcome.job);
-    if (byKey.has(key)) continue;
-    byKey.add(key);
-    jobs.push(outcome.job);
+    const job = outcome.job;
+    if (!job) continue;
+    if (jobs.some((stored) => isSameVacancy(stored, job))) continue;
+    jobs.push(job);
   }
 
   const alreadyKnown = diagnostics.filter((d) => d.reason === "already_known").length;

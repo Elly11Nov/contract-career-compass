@@ -6,6 +6,7 @@
  */
 import { createJob, createSearchRun, getJobs } from "./jobService";
 import { searchJobCandidates } from "./jobSearch.functions";
+import { isSameVacancy } from "./jobIdentity";
 import { MAX_AGE_DAYS, SEARCH_CRITERIA } from "./searchCriteria";
 import type {
   CandidateJob,
@@ -73,45 +74,29 @@ export function scoreJob(job: CandidateJob): CandidateJob {
   return { ...job, match_score: score, recommendation };
 }
 
-function normalizeUrl(url: string) {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname.replace(/\/$/, "")}`.toLowerCase();
-  } catch {
-    return url.toLowerCase();
-  }
-}
-
-function identityKey(job: { company: string; title: string; city: string; country: string }) {
-  return `${job.company}|${job.title}|${job.city}|${job.country}`.toLowerCase().trim();
-}
-
 /** Persist qualifying jobs via jobService, skipping duplicates. */
 export async function saveJobs(
   candidates: CandidateJob[],
 ): Promise<{ added: Job[]; duplicates: number }> {
   const existing = await getJobs();
-  const existingUrls = new Set(existing.map((j) => normalizeUrl(j.url)));
-  const existingKeys = new Set(existing.map(identityKey));
+  const recognised = [...existing];
 
   const added: Job[] = [];
   let duplicates = 0;
 
   for (const candidate of candidates) {
-    const url = normalizeUrl(candidate.url);
-    const key = identityKey(candidate);
-    if (existingUrls.has(url) || existingKeys.has(key)) {
+    if (recognised.some((stored) => isSameVacancy(stored, candidate))) {
       duplicates += 1;
       continue;
     }
-    existingUrls.add(url);
-    existingKeys.add(key);
-
     const created = await createJob({
       ...candidate,
       status: "New",
     } as Partial<Job>);
-    if (created) added.push(created);
+    if (created) {
+      added.push(created);
+      recognised.push(created);
+    }
   }
 
   return { added, duplicates };
