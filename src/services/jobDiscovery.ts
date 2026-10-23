@@ -32,7 +32,7 @@ export function buildQueries(now = new Date()): BuiltQuery[] {
         const family = (slot + day) % 2;
         const titles = round < 2 ? families[family] : expanded[family];
         if (!titles?.length) continue;
-        const title = titles[(day + offset + Math.floor(round / 2)) % titles.length];
+        const title = titles[(day + SEARCH_COUNTRIES.indexOf(country) + Math.floor(round / 2)) % titles.length];
         const sites = SEARCH_SITES[country];
         const useBoards = (round + day) % 2 === 1 && sites.length > 0;
         const employment = country === "Switzerland"
